@@ -1,0 +1,67 @@
+{% load static %}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#147c78">
+  <title>{% block title %}表扬榜{% endblock %}</title>
+  {% block stylesheets %}<link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261009-admin">{% endblock %}
+  <link rel="icon" href="{% static 'icons/award.svg' %}" type="image/svg+xml">
+  <script src="{% static 'js/app.js' %}?v=20261007" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body {% block body_attributes %}{% endblock %}>
+<!-- THESIS: A working class register, with subject records and a clear daily state.
+OWN-WORLD: Cool white paper, ink-green text, teal actions, coral corrections and fine rules.
+STORY: Choose an identity, report students, review the day's records and publish an image.
+FIRST VIEWPORT: Compact navigation, class/date context, a visible primary action and real records.
+FORM: Class register; grounded direction 5; seed 8ed0893d.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md -->
+{% if request.user.is_authenticated and not is_popup %}
+<a class="pb-skip-link" href="#main-content">跳到主要内容</a>
+<div class="pb-shell">
+  <button class="pb-nav-backdrop" data-nav-backdrop type="button" aria-label="关闭导航" hidden></button>
+  <aside class="pb-sidebar" id="workspace-nav" aria-label="主导航">
+    <div class="pb-brand-row">
+    <a class="pb-brand" href="{% url 'dashboard' %}"><img src="{% static 'icons/award.svg' %}" alt="" width="26" height="26">表扬榜</a>
+    <button type="button" class="pb-icon-button pb-nav-close" data-close-nav title="关闭导航" aria-label="关闭导航"><img src="{% static 'icons/x.svg' %}" alt=""></button>
+    </div>
+    <p class="pb-workspace-label">{% if is_admin %}管理工作台{% else %}教师工作台{% endif %}</p>
+    <nav aria-label="工作台">
+      <a class="pb-nav {% if active_nav == 'dashboard' %}is-active{% endif %}" {% if active_nav == 'dashboard' %}aria-current="page"{% endif %} href="{% url 'dashboard' %}{% if current_class %}?classroom={{ current_class.pk }}{% endif %}"><img src="{% static 'icons/clipboard-list.svg' %}" alt="">每日填报</a>
+      {% if current_class %}
+        {% if current_class.homeroom_teacher_id == request.user.pk or is_admin %}
+        <a class="pb-nav {% if active_nav == 'roster' %}is-active{% endif %}" {% if active_nav == 'roster' %}aria-current="page"{% endif %} href="{% url 'roster' current_class.pk %}"><img src="{% static 'icons/users.svg' %}" alt="">学生名单</a>
+        {% endif %}
+        <a class="pb-nav {% if active_nav == 'assignments' %}is-active{% endif %}" {% if active_nav == 'assignments' %}aria-current="page"{% endif %} href="{% url 'assignments' current_class.pk %}"><img src="{% static 'icons/book-open.svg' %}" alt="">任教关系</a>
+      {% endif %}
+      {% if is_admin %}<a class="pb-nav {% if active_nav == 'admin' %}is-active{% endif %}" {% if active_nav == 'admin' %}aria-current="page"{% endif %} href="{% url 'admin:index' %}"><img src="{% static 'icons/settings.svg' %}" alt="">全站管理</a>{% endif %}
+    </nav>
+    <div class="pb-sidebar-foot">
+      <div class="pb-identity"><span class="pb-avatar" aria-hidden="true">{{ request.user|stringformat:"s"|slice:":1" }}</span><div><strong>{{ request.user }}</strong><span>{% if is_admin %}管理员{% elif current_class.homeroom_teacher_id == request.user.pk %}班主任{% else %}科任教师{% endif %}</span></div></div>
+      <a class="pb-nav" href="{% url 'password_change' %}"><img src="{% static 'icons/key-round.svg' %}" alt="">修改密码</a>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="pb-nav" type="submit"><img src="{% static 'icons/log-out.svg' %}" alt="">退出登录</button></form>
+    </div>
+  </aside>
+  <main class="pb-main">
+    <header class="pb-topbar">
+      <div class="pb-topbar-leading"><button type="button" class="pb-icon-button pb-mobile-menu" data-toggle-nav aria-controls="workspace-nav" aria-expanded="false" title="打开导航" aria-label="打开导航"><img src="{% static 'icons/menu.svg' %}" alt=""></button><a class="pb-brand pb-mobile-brand" href="{% url 'dashboard' %}">表扬榜</a><span class="pb-topbar-context">{% if workspace_context %}{{ workspace_context }}{% elif current_class %}{{ current_class }}{% else %}我的工作台{% endif %}</span></div>
+      <span class="pb-topbar-date"><img src="{% static 'icons/calendar-days.svg' %}" alt="">{{ today|date:"Y年n月j日" }}</span>
+    </header>
+    <div class="pb-content" id="main-content" tabindex="-1">
+{% else %}
+<main class="pb-public" id="main-content">
+{% endif %}
+      {% if messages %}<div class="pb-messages" aria-live="polite">{% for message in messages %}<div class="pb-message pb-message--{{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+      {% block workspace_content %}{% block content %}{% endblock %}{% endblock %}
+{% if request.user.is_authenticated and not is_popup %}
+    </div>
+  </main>
+</div>
+{% else %}
+</main>
+{% endif %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,40 @@
+{% extends "board/base.html" %}{% load static %}
+{% block title %}每日填报 · 表扬榜{% endblock %}
+{% block content %}
+<div class="pb-heading"><div><h1>每日填报</h1><p class="pb-subtitle">{{ day|date:"Y年n月j日" }}{% if current_class %} · {{ current_class }}{% endif %}</p></div>
+{% if current_class %}<span class="pb-status {% if board.is_finalized %}pb-status--success{% else %}pb-status--open{% endif %}"><span class="pb-status-dot" aria-hidden="true"></span>{{ board.get_state_display }}</span>{% endif %}</div>
+{% if current_class %}
+<form method="get" class="pb-toolbar">
+  <div class="pb-field"><label for="class-select">班级</label><select class="pb-input" name="classroom" id="class-select">{% for classroom in classrooms %}<option value="{{ classroom.pk }}" {% if classroom.pk == current_class.pk %}selected{% endif %}>{{ classroom }}</option>{% endfor %}</select></div>
+  {% if manager %}<div class="pb-field"><label for="day-select">日期</label><input class="pb-input" type="date" id="day-select" name="day" value="{{ day|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}"></div>{% endif %}
+  <button type="submit" class="pb-button pb-button--secondary"><img src="{% static 'icons/refresh-cw.svg' %}" alt="">切换</button>
+  {% if day != today and manager %}<a class="pb-button pb-button--text" href="{% url 'dashboard' %}?classroom={{ current_class.pk }}">回到今天</a>{% endif %}
+</form>
+{% if manager %}
+<section class="pb-summary-band" aria-label="当日汇总"><div class="pb-summary-copy"><img src="{% static 'icons/clipboard-list.svg' %}" width="24" height="24" alt=""><div><h2>当日汇总</h2><p class="pb-muted">已提交 {{ submissions|length }} 份填报{% if board.is_finalized %} · 内容已锁定{% endif %}</p></div></div><a class="pb-button pb-button--primary" href="{% url 'board_detail' board.pk %}"><img src="{% static 'icons/scan-eye.svg' %}" alt="">{% if board.is_finalized %}查看定稿{% else %}汇总与定稿{% endif %}</a></section>
+{% endif %}
+<div class="pb-dashboard-grid"><div class="pb-dashboard-main">
+<section class="pb-section">
+  <div class="pb-section-heading"><h2>我的科目</h2><span class="pb-muted">{{ assignments|length }} 个任教科目</span></div>
+  {% if assignments %}
+  <div class="pb-subject-grid">{% for assignment in assignments %}
+    <article class="pb-subject"><div class="pb-subject-heading"><h3>{{ assignment.subject }}</h3><span class="pb-status {% if assignment.submission.is_submitted %}pb-status--success{% elif assignment.submission %}pb-status--warning{% endif %}">{% if assignment.submission.is_submitted %}已提交{% elif assignment.submission %}草稿{% else %}待填报{% endif %}</span></div><p class="pb-muted">{{ assignment.teacher }} · {{ current_class }}</p>
+      {% if not board.is_finalized %}<a class="pb-button {% if assignment.submission %}pb-button--secondary{% else %}pb-button--primary{% endif %}" href="{% url 'editor' board.pk assignment.pk %}"><img src="{% static 'icons/square-pen.svg' %}" alt="">{% if assignment.submission %}修改填报{% else %}填写表扬{% endif %}</a>{% else %}<span class="pb-locked"><img src="{% static 'icons/lock.svg' %}" alt="" width="16" height="16">已定稿，填报已锁定</span>{% endif %}
+    </article>
+  {% endfor %}</div>
+  {% else %}<div class="pb-empty">{% if is_admin %}请选择全站管理配置教师与任教关系。{% else %}此班暂无你的任教科目，请联系管理员。{% endif %}</div>{% endif %}
+</section>
+<section class="pb-section"><div class="pb-section-heading"><h2>{% if manager %}已提交内容{% else %}我的填报内容{% endif %}</h2><span class="pb-muted">{{ submissions|length }} 份填报</span></div>
+{% for submission in submissions %}<div class="pb-submission">
+<div class="pb-section-heading"><div class="pb-submission-heading"><img src="{% static 'icons/book-open.svg' %}" width="18" height="18" alt=""><h3>{{ submission.assignment.subject }}</h3><span class="pb-muted">{{ submission.assignment.teacher }}</span></div><span class="pb-status {% if submission.is_submitted %}pb-status--success{% else %}pb-status--warning{% endif %}">{% if submission.is_submitted %}已提交{% else %}草稿{% endif %}</span></div>
+{% for item in submission.items.all %}<div class="pb-praise-row"><h3>{% if item.all_students %}全班同学{% else %}{% for student in item.student_snapshots %}{{ student.name }}{% if not forloop.last %}、{% endif %}{% endfor %}{% endif %}</h3><p>表扬项目：{{ item.title }}</p>{% if item.note %}<p class="pb-muted pb-custom-praise-note">原因与备注：{{ item.note }}</p>{% endif %}<p class="pb-muted">科目：{{ submission.assignment.subject }} · 教师：{{ submission.assignment.teacher }}</p></div>{% endfor %}
+</div>{% empty %}<div class="pb-empty"><img src="{% static 'icons/clipboard-list.svg' %}" width="32" height="32" alt=""><p>{% if manager %}当天还没有已提交的表扬内容。{% else %}当天还没有你的填报内容。{% endif %}</p></div>{% endfor %}</section>
+</div>
+<aside class="pb-dashboard-aside" aria-label="班级与历史记录">
+  <section class="pb-section"><h2>当前班级</h2><dl class="pb-facts"><div><dt>班级</dt><dd>{{ current_class }}</dd></div><div><dt>班主任</dt><dd>{{ current_class.homeroom_teacher|default:"未分配" }}</dd></div><div><dt>榜单状态</dt><dd>{{ board.get_state_display }}</dd></div></dl><a class="pb-aside-link" href="{% url 'assignments' current_class.pk %}">查看任教关系<img src="{% static 'icons/chevron-right.svg' %}" alt="" width="16" height="16"></a></section>
+  {% if manager %}<section class="pb-section"><h2>历史榜单</h2><div class="pb-history-list">{% for entry in recent %}<a class="pb-history-row" href="{% url 'board_detail' entry.pk %}"><div><strong>{{ entry.day|date:"n月j日" }}</strong><span class="pb-muted">{{ entry.day|date:"Y年" }} · {{ entry.get_state_display }}</span></div><img src="{% static 'icons/chevron-right.svg' %}" width="18" height="18" alt=""></a>{% empty %}<p class="pb-muted pb-history-empty">定稿后的榜单会保存在这里。</p>{% endfor %}</div></section>{% endif %}
+</aside></div>
+{% else %}
+<div class="pb-empty"><img src="{% static 'icons/users.svg' %}" width="36" height="36" alt=""><h2>还没有可用的班级</h2><p>{% if is_admin %}先在全站管理中创建科目、教师和班级，再分配任教关系。{% else %}请联系管理员为你的账号分配班级和科目。{% endif %}</p>{% if is_admin %}<a class="pb-button pb-button--primary" href="{% url 'admin:index' %}"><img src="{% static 'icons/settings.svg' %}" alt="">全站管理</a>{% endif %}</div>
+{% endif %}
+{% endblock %}

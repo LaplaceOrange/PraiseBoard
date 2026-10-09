@@ -1,0 +1,30 @@
+{% extends "board/base.html" %}{% load static %}
+{% block title %}{{ assignment.subject }}填报 · 表扬榜{% endblock %}
+{% block content %}
+<div class="pb-heading"><div><h1>{{ assignment.subject }}表扬填报</h1><p class="pb-subtitle">{{ current_class }} · {{ board.day|date:"Y年n月j日" }} · {{ assignment.teacher }}</p></div><a class="pb-button pb-button--secondary" href="{% url 'dashboard' %}?classroom={{ current_class.pk }}&day={{ board.day|date:'Y-m-d' }}"><img src="{% static 'icons/arrow-left.svg' %}" alt="">返回</a></div>
+<form id="praise-editor" data-save-url="{% url 'submit' board.pk assignment.pk %}" data-version="{{ board.version }}">
+  {% csrf_token %}
+  <div id="praise-items"></div>
+  <button type="button" id="add-item" class="pb-button pb-button--secondary"><img src="{% static 'icons/plus.svg' %}" alt="">添加表扬项目</button>
+  <div class="pb-form-error" id="editor-error" role="alert"></div>
+  <div class="pb-editor-actions"><span class="pb-save-state pb-muted" id="editor-save-state" role="status">尚未修改</span><div class="pb-actions"><button class="pb-button pb-button--secondary" type="submit" name="mode" value="draft"><img src="{% static 'icons/save.svg' %}" alt="">保存草稿</button><button class="pb-button pb-button--primary" type="submit" name="mode" value="submit"><img src="{% static 'icons/check.svg' %}" alt="">提交填报</button></div></div>
+</form>
+{{ students_data|json_script:"student-data" }}
+{{ initial_items|json_script:"initial-items" }}
+<template id="item-template">
+  <section class="pb-item-editor">
+    <div class="pb-section-heading"><h2>表扬项目 <span data-item-number></span></h2><button class="pb-icon-button pb-delete-item" type="button" title="删除项目" aria-label="删除项目"><img src="{% static 'icons/trash-2.svg' %}" alt=""></button></div>
+    <div class="pb-item-layout"><div class="pb-item-fields">
+    <div class="pb-field"><label>项目名称<input class="pb-input" name="title" maxlength="120" required placeholder="例如：作业认真、课堂积极"></label></div>
+    <div class="pb-field"><label>说明 <span class="pb-muted">（选填）</span><textarea class="pb-input" name="note" maxlength="400" rows="2"></textarea></label></div>
+    </div><div class="pb-selector">
+      <div class="pb-section-heading"><strong>表扬名单</strong><div class="pb-actions"><span class="pb-status" data-selected-count aria-live="polite">已选 0 人</span><button type="button" class="pb-icon-button" data-clear-students title="清空选择" aria-label="清空选择"><img src="{% static 'icons/rotate-ccw.svg' %}" alt=""></button></div></div>
+      <label class="pb-all-students"><input type="checkbox" name="all_students">全班同学</label>
+      <div class="pb-search-input"><img src="{% static 'icons/search.svg' %}" width="18" height="18" alt=""><input type="search" class="pb-input pb-student-search" placeholder="搜索姓名或学号" aria-label="搜索姓名或学号"></div>
+      <div class="pb-student-list"></div>
+      <p class="pb-muted pb-student-empty" role="status" hidden>没有匹配的学生。</p>
+    </div></div>
+  </section>
+</template>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/editor.js' %}?v=20261007" defer></script>{% endblock %}

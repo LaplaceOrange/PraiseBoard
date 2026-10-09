@@ -1,0 +1,25 @@
+{% extends "board/base.html" %}{% load static %}
+{% block title %}教师登录 · 表扬榜{% endblock %}
+{% block content %}
+<section class="pb-login">
+  <div class="pb-login-brand"><img src="{% static 'icons/award.svg' %}" width="32" height="32" alt=""><span>表扬榜</span></div>
+  <h1>教师登录</h1>
+  <form method="post" class="pb-form" id="teacher-login" data-identities-url="{% url 'identities' %}">
+    {% csrf_token %}
+    <div class="pb-field"><label for="classroom">班级</label>
+    <select class="pb-input" name="classroom" id="classroom" required>
+      <option value="">选择班级</option>
+      {% for classroom in public_classes %}<option value="{{ classroom.pk }}" {% if classroom.pk|stringformat:"s" == selected_class %}selected{% endif %}>{{ classroom.name }}</option>{% endfor %}
+    </select></div>
+    <div class="pb-field"><label for="identity">当前身份</label>
+    <select class="pb-input" name="identity" id="identity" required>
+      <option value="">选择科目与姓名</option>
+      {% for identity in identities %}<option value="{{ identity.id }}">{{ identity.label }}</option>{% endfor %}
+    </select></div>
+    <div class="pb-field"><label for="password">密码</label><div class="pb-password-input"><input class="pb-input" name="password" id="password" type="password" autocomplete="current-password" required><button type="button" class="pb-icon-button" data-toggle-password="password" aria-label="显示密码" title="显示密码" aria-pressed="false"><img src="{% static 'icons/eye.svg' %}" data-visible-icon="{% static 'icons/eye-off.svg' %}" data-hidden-icon="{% static 'icons/eye.svg' %}" alt=""></button></div></div>
+    <p id="login-feedback" class="pb-form-error" role="alert"></p>
+    <button class="pb-button pb-button--primary pb-button--full" type="submit"><img src="{% static 'icons/log-in.svg' %}" alt="">进入工作台</button>
+  </form>
+  {% if not public_classes %}<p class="pb-empty">尚未配置班级，请联系管理员。</p>{% endif %}
+</section>
+{% endblock %}

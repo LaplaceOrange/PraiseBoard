@@ -1,0 +1,36 @@
+{% extends "board/base.html" %}{% load static %}
+{% block title %}班级汇总 · 表扬榜{% endblock %}
+{% block content %}
+<div class="pb-heading"><div><h1>{{ current_class }}表扬榜</h1><p class="pb-subtitle">{{ board.day|date:"Y年n月j日" }} · <span class="pb-status {% if board.is_finalized %}pb-status--success{% endif %}">{{ board.get_state_display }}</span></p></div>
+<a class="pb-button pb-button--secondary" href="{% url 'dashboard' %}?classroom={{ current_class.pk }}&day={{ board.day|date:'Y-m-d' }}">返回</a></div>
+<div class="pb-action-band">
+  <a class="pb-button pb-button--secondary" href="{% url 'preview' board.pk %}" target="_blank" rel="noopener"><img src="{% static 'icons/scan-eye.svg' %}" alt="">图片预览</a>
+  {% if board.is_finalized %}
+  <form method="post" action="{% url 'export' board.pk %}">{% csrf_token %}<button class="pb-button pb-button--primary" type="submit"><img src="{% static 'icons/download.svg' %}" alt="">下载图片</button></form>
+  <form method="post" action="{% url 'board_action' board.pk %}" data-confirm="重新打开后，老师可以修改今天的填报。确定继续？">{% csrf_token %}<input type="hidden" name="version" value="{{ board.version }}"><input type="hidden" name="action" value="reopen"><button class="pb-button pb-button--secondary" type="submit"><img src="{% static 'icons/lock-open.svg' %}" alt="">重新打开</button></form>
+  {% else %}
+  <form method="post" action="{% url 'board_action' board.pk %}" id="board-metadata-form">{% csrf_token %}<input type="hidden" name="version" value="{{ board.version }}"><div class="pb-field"><label for="board-title">标题</label><input class="pb-input" id="board-title" name="title" maxlength="120" value="{{ board.title }}" placeholder="今日表扬榜"></div><div class="pb-field"><label for="board-footer">落款</label><input class="pb-input" id="board-footer" name="footer" maxlength="160" value="{{ board.footer }}"></div><div class="pb-actions"><button class="pb-button pb-button--secondary" name="action" value="metadata" type="submit">保存标题与落款</button><button class="pb-button pb-button--primary" name="action" value="finalize" type="submit" data-finalize><img src="{% static 'icons/lock.svg' %}" alt="">定稿</button></div></form>
+  {% endif %}
+</div>
+{% if not board.is_finalized %}
+<section class="pb-section"><h2>教师填报</h2>
+<div class="pb-record-list">{% for assignment in all_assignments %}<div class="pb-record"><span>{{ assignment.subject }} · {{ assignment.teacher }}</span><a class="pb-button pb-button--secondary" href="{% url 'editor' board.pk assignment.pk %}"><img src="{% static 'icons/square-pen.svg' %}" alt="">查看与调整</a></div>{% empty %}<div class="pb-empty">没有任教关系，请联系管理员配置。</div>{% endfor %}</div>
+</section>
+{% endif %}
+<section class="pb-section"><h2>{% if board.is_finalized %}定稿内容{% else %}榜单内容{% endif %}</h2>
+{% for section in snapshot.sections %}<div class="pb-submission">
+{% for item in section.items %}<div class="pb-praise-row">
+  <div class="pb-section-heading"><h3>{% if item.all_students %}全班同学{% else %}{% for student in item.students %}{{ student.name }}{% if not forloop.last %}、{% endif %}{% endfor %}{% endif %}</h3>{% if not board.is_finalized %}
+  <div class="pb-icon-actions">
+  <form method="post" action="{% url 'item_action' item.id %}">{% csrf_token %}<input type="hidden" name="version" value="{{ board.version }}"><button name="action" value="up" type="submit" class="pb-icon-button" title="上移" aria-label="上移"><img src="{% static 'icons/arrow-up.svg' %}" alt=""></button><button name="action" value="down" type="submit" class="pb-icon-button" title="下移" aria-label="下移"><img src="{% static 'icons/arrow-down.svg' %}" alt=""></button></form>
+  <form method="post" action="{% url 'item_action' item.id %}" data-confirm="确定删除这条表扬项目？">{% csrf_token %}<input type="hidden" name="version" value="{{ board.version }}"><button name="action" value="delete" type="submit" class="pb-icon-button" title="删除项目" aria-label="删除项目"><img src="{% static 'icons/trash-2.svg' %}" alt=""></button></form>
+  </div>{% endif %}</div>
+  <p>表扬项目：{{ item.title }}</p>
+  {% if item.note %}<p class="pb-muted pb-custom-praise-note">原因与备注：{{ item.note }}</p>{% endif %}
+  <p class="pb-muted">科目：{{ section.subject }} · 教师：{{ item.teacher }}</p>
+</div>{% endfor %}</div>{% empty %}<div class="pb-empty">还没有已提交的表扬项目。</div>{% endfor %}
+</section>
+{% if revisions %}<section class="pb-section"><h2>定稿与下载记录</h2><div class="pb-record-list">
+{% for revision in revisions %}<div class="pb-record pb-record--history"><div><strong>第 {{ revision.number }} 版</strong><p class="pb-muted">{{ revision.created_at|date:"Y-m-d H:i" }} · {{ revision.created_by }}</p></div><div class="pb-actions">{% for export in revision.exports.all %}<a class="pb-button pb-button--secondary" href="{% url 'download_export' export.pk %}"><img src="{% static 'icons/download.svg' %}" alt="">图片 {{ forloop.counter }}</a>{% empty %}<span class="pb-muted">尚未生成图片</span>{% endfor %}</div></div>{% endfor %}
+</div></section>{% endif %}
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "board/base.html" %}
+{% block content %}
+<div class="pb-heading"><div><h1>确认导入名单</h1><p class="pb-subtitle">{{ current_class }} · {{ batch.rows|length }} 条记录</p></div><a class="pb-button pb-button--secondary" href="{% url 'import_roster' current_class.pk %}">重新上传</a></div>
+{% if batch.errors %}<div class="pb-message pb-message--error"><strong>发现错误，名单尚未导入。</strong><ul>{% for error in batch.errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
+<div class="pb-table-wrap"><table class="pb-table"><thead><tr><th>学号</th><th>姓名</th></tr></thead><tbody>{% for row in batch.rows %}<tr><td>{{ row.student_no }}</td><td>{{ row.name }}</td></tr>{% endfor %}</tbody></table></div>
+{% if not batch.errors and batch.state == 'preview' %}<form method="post" class="pb-section">{% csrf_token %}<button class="pb-button pb-button--primary" type="submit">确认导入 {{ batch.rows|length }} 人</button></form>{% endif %}
+{% endblock %}

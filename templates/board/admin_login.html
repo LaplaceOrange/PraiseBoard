@@ -1,0 +1,13 @@
+{% extends "board/base.html" %}{% load static %}
+{% block title %}管理员登录 · 表扬榜{% endblock %}
+{% block content %}
+<section class="pb-login">
+  <div class="pb-login-brand"><img src="{% static 'icons/award.svg' %}" width="32" height="32" alt=""><span>表扬榜</span></div>
+  <h1>管理员登录</h1>
+  <form method="post" class="pb-form">
+    {% csrf_token %}{{ form.non_field_errors }}
+    {% for field in form %}<div class="pb-field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}
+    <button class="pb-button pb-button--primary pb-button--full" type="submit"><img src="{% static 'icons/log-in.svg' %}" alt="">登录管理工作台</button>
+  </form>
+</section>
+{% endblock %}

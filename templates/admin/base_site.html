@@ -1,0 +1,43 @@
+{% extends "board/base.html" %}
+{% load i18n static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} · {% endif %}{{ title }} · {{ site_title }}{% endblock %}
+
+{% block stylesheets %}
+<link rel="stylesheet" href="{% static 'admin/css/base.css' %}">
+{{ block.super }}
+{% endblock %}
+
+{% block head %}
+  {% block extrastyle %}{% endblock %}
+  {% block extrahead %}{% endblock %}
+  {% block responsive %}<link rel="stylesheet" href="{% static 'admin/css/responsive.css' %}">{% endblock %}
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}?v=20261009-admin">
+  {% block blockbots %}<meta name="robots" content="NONE,NOARCHIVE">{% endblock %}
+{% endblock %}
+
+{% block body_attributes %}class="pb-admin {% if is_popup %}popup {% endif %}{% block bodyclass %}{% endblock %}" data-admin-utc-offset="{% now 'Z' %}"{% endblock %}
+
+{% block workspace_content %}
+<div class="pb-custom-admin" id="content-start" tabindex="-1">
+  {% if not is_popup %}
+    {% block nav-breadcrumbs %}
+    <nav aria-label="{% translate 'Breadcrumbs' %}">
+      {% block breadcrumbs %}
+      <div class="breadcrumbs"><a href="{% url 'admin:index' %}">全站管理</a>{% if title %} &rsaquo; {{ title }}{% endif %}</div>
+      {% endblock %}
+    </nav>
+    {% endblock %}
+  {% endif %}
+  <div id="content" class="{% block coltype %}colM{% endblock %}">
+    {% block pretitle %}{% endblock %}
+    {% block content_title %}{% if title %}<h1>{{ title }}</h1>{% endif %}{% endblock %}
+    {% block content_subtitle %}{% if subtitle %}<p class="pb-subtitle">{{ subtitle }}</p>{% endif %}{% endblock %}
+    {% block content %}{% block object-tools %}{% endblock %}{{ content }}{% endblock %}
+    {% block sidebar %}{% endblock %}
+  </div>
+  {% block footer %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block scripts %}{% block extrabody %}{% endblock %}{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "board/base.html" %}{% load static %}
+{% block content %}
+<div class="pb-heading"><div><h1>导入学生名单</h1><p class="pb-subtitle">{{ current_class }}</p></div><a class="pb-button pb-button--secondary" href="{% url 'roster' current_class.pk %}">返回名单</a></div>
+<div class="pb-form--narrow"><a class="pb-button pb-button--secondary" href="{% url 'roster_template' current_class.pk %}"><img src="{% static 'icons/download.svg' %}" alt="">下载 CSV 模板</a>
+<p class="pb-muted">文件需包含“学号”和“姓名”两列。相同学号会更新姓名，不会删除其他学生。CSV 请保存为 UTF-8；Excel 中学号建议使用文本格式，以保留前导零。</p>
+<form method="post" enctype="multipart/form-data" class="pb-form">{% csrf_token %}{% for field in form %}<div class="pb-field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}<button class="pb-button pb-button--primary" type="submit"><img src="{% static 'icons/upload.svg' %}" alt="">上传并预览</button></form></div>
+{% endblock %}

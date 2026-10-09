@@ -1,0 +1,5 @@
+{% extends "board/base.html" %}
+{% block content %}
+<div class="pb-heading"><div><h1>任教关系</h1><p class="pb-subtitle">{{ current_class }}{% if current_class.homeroom_teacher %} · 班主任：{{ current_class.homeroom_teacher }}{% endif %}</p></div>{% if is_admin %}<a class="pb-button pb-button--primary" href="{% url 'admin:board_teacherassignment_changelist' %}">管理任教分配</a>{% endif %}</div>
+<div class="pb-table-wrap"><table class="pb-table"><thead><tr><th>科目</th><th>教师</th><th>状态</th></tr></thead><tbody>{% for assignment in assignments %}<tr><td>{{ assignment.subject }}</td><td>{{ assignment.teacher }}</td><td>{% if assignment.is_active %}任教中{% else %}已停用{% endif %}</td></tr>{% empty %}<tr><td colspan="3">暂无任教关系。</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

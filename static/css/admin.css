@@ -1,0 +1,197 @@
+/* Keep Django's widgets and DOM contracts inside the shared workspace. */
+body.pb-admin {
+  color-scheme: light;
+  --primary: var(--pb-primary);
+  --secondary: var(--pb-primary);
+  --accent: var(--pb-ink);
+  --body-fg: var(--pb-ink);
+  --body-bg: var(--pb-surface);
+  --body-quiet-color: var(--pb-muted);
+  --body-medium-color: var(--pb-ink);
+  --body-loud-color: var(--pb-ink);
+  --header-bg: var(--pb-tint);
+  --header-color: var(--pb-ink);
+  --header-link-color: var(--pb-ink);
+  --link-fg: var(--pb-primary);
+  --link-hover-color: var(--pb-primary-hover);
+  --link-selected-fg: var(--pb-primary-hover);
+  --hairline-color: var(--pb-rule);
+  --border-color: var(--pb-input-rule);
+  --darkened-bg: var(--pb-bg);
+  --selected-bg: var(--pb-tint);
+  --selected-row: var(--pb-tint);
+  --error-fg: var(--pb-error);
+  --button-bg: var(--pb-primary);
+  --button-hover-bg: var(--pb-primary-hover);
+  --default-button-bg: var(--pb-primary);
+  --default-button-hover-bg: var(--pb-primary-hover);
+  --delete-button-bg: var(--pb-error);
+  --delete-button-hover-bg: var(--pb-error);
+  --font-family-primary: var(--pb-font);
+  font: 15px/1.6 var(--pb-font);
+  color: var(--pb-ink);
+  background: var(--pb-bg);
+}
+.pb-admin .pb-brand:link, .pb-admin .pb-brand:visited { color: var(--pb-ink); }
+.pb-admin .pb-nav:link, .pb-admin .pb-nav:visited { color: var(--pb-muted); }
+.pb-admin .pb-nav.is-active { color: var(--pb-primary); }
+.pb-admin .pb-nav:hover { color: var(--pb-ink); }
+.pb-custom-admin { min-width: 0; }
+.pb-custom-admin #content { width: auto; max-width: none; padding: 0; }
+.pb-custom-admin #content-main { float: none; min-width: 0; width: 100%; }
+.pb-custom-admin #content > h1 { margin-bottom: 28px; color: var(--pb-ink); }
+.pb-custom-admin .breadcrumbs { padding: 0 0 20px; background: transparent; color: var(--pb-muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.pb-custom-admin .breadcrumbs a { color: var(--pb-primary); }
+.pb-custom-admin .breadcrumbs a:hover { color: var(--pb-primary-hover); }
+.pb-custom-admin .module { border: 0; background: transparent; margin-bottom: 32px; min-width: 0; }
+.pb-custom-admin .module table { width: 100%; background: var(--pb-surface); }
+.pb-custom-admin .module caption,
+.pb-custom-admin .module h2,
+.pb-custom-admin .fieldset-heading,
+.pb-custom-admin .inline-heading {
+  padding: 0 0 12px;
+  margin-bottom: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pb-ink);
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.5;
+  text-align: left;
+}
+.pb-custom-admin .module caption a.section { color: var(--pb-ink); font-size: inherit; font-weight: inherit; }
+.pb-custom-admin .module caption a.section:hover { color: var(--pb-primary); }
+.pb-custom-admin table { border-collapse: collapse; }
+.pb-custom-admin table th, .pb-custom-admin table td { padding: 12px 16px; border-bottom: 1px solid var(--pb-rule); text-align: left; font-size: 14px; line-height: 1.6; vertical-align: middle; }
+.pb-custom-admin table th { font-weight: 600; }
+.pb-custom-admin table thead th { color: var(--pb-muted); background: var(--pb-bg); font-size: 13px; }
+.pb-custom-admin table tbody tr:nth-child(odd), .pb-custom-admin table tbody tr:nth-child(even) { background: var(--pb-surface); }
+.pb-custom-admin table tbody tr:hover { background: var(--pb-bg); }
+.pb-custom-admin a.addlink, .pb-custom-admin a.changelink, .pb-custom-admin a.viewlink { background-image: none; padding-left: 0; }
+.pb-custom-admin .object-tools { float: none; margin: 0 0 24px; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.pb-custom-admin .object-tools li { height: auto; float: none; margin: 0; padding: 0; list-style: none; }
+.pb-custom-admin .object-tools a,
+.pb-custom-admin .button,
+.pb-custom-admin input[type="submit"],
+.pb-custom-admin input[type="button"],
+.pb-custom-admin .submit-row a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  height: auto;
+  padding: 10px 16px;
+  border: 1px solid var(--pb-input-rule);
+  border-radius: var(--pb-radius);
+  background: var(--pb-surface);
+  color: var(--pb-ink);
+  font: 600 14px/1.5 var(--pb-font);
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: normal;
+  box-shadow: none;
+  cursor: pointer;
+}
+.pb-custom-admin .object-tools a.addlink { gap: 8px; padding: 10px 16px; background: var(--pb-primary); border-color: var(--pb-primary); color: white; }
+.pb-custom-admin .object-tools a.addlink::before { content: ""; width: 18px; height: 18px; background: url("../icons/plus.svg") center / contain no-repeat; filter: brightness(0) invert(1); flex-shrink: 0; }
+.pb-custom-admin input[type="submit"].default { background: var(--pb-primary); border-color: var(--pb-primary); color: white; }
+.pb-custom-admin .button:hover, .pb-custom-admin input[type="submit"]:hover, .pb-custom-admin .submit-row a:hover { background: var(--pb-tint); color: var(--pb-ink); }
+.pb-custom-admin .object-tools a.addlink:hover, .pb-custom-admin input[type="submit"].default:hover { background: var(--pb-primary-hover); color: white; }
+.pb-custom-admin .submit-row a.deletelink, .pb-custom-admin input[type="submit"].deletelink { color: var(--pb-error); background: var(--pb-surface); border-color: var(--pb-error); }
+.pb-custom-admin input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]),
+.pb-custom-admin select,
+.pb-custom-admin textarea {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--pb-input-rule);
+  border-radius: var(--pb-radius);
+  background: var(--pb-surface);
+  color: var(--pb-ink);
+  font: 14px/1.5 var(--pb-font);
+}
+.pb-custom-admin textarea { resize: vertical; }
+.pb-custom-admin input:focus, .pb-custom-admin select:focus, .pb-custom-admin textarea:focus { border-color: var(--pb-primary); }
+.pb-custom-admin :focus-visible { outline: 3px solid var(--pb-primary); outline-offset: 3px; }
+.pb-custom-admin .help, .pb-custom-admin .help li, .pb-custom-admin .quiet { color: var(--pb-muted); font-size: 13px; line-height: 1.5; }
+.pb-custom-admin .form-row { padding: 16px 0; overflow: visible; font-size: 14px; }
+.pb-custom-admin .form-row > div, .pb-custom-admin .fieldBox { min-width: 0; }
+.pb-custom-admin .aligned label { font-size: 14px; color: var(--pb-ink); }
+.pb-custom-admin .readonly { overflow-wrap: anywhere; }
+.pb-custom-admin .submit-row { padding: 20px 0; margin: 24px 0 0; border: 0; border-top: 1px solid var(--pb-rule); border-radius: 0; background: transparent; gap: 8px; overflow: visible; flex-direction: row; }
+.pb-custom-admin .errornote { margin: 0 0 20px; padding: 14px 18px; background: var(--pb-surface); border: 1px solid var(--pb-error); border-radius: var(--pb-radius); font-size: 14px; }
+.pb-custom-admin #changelist { gap: 28px; background: transparent; }
+.pb-custom-admin #changelist .changelist-form-container { min-width: 0; }
+.pb-custom-admin #changelist .results { max-width: 100%; overflow-x: auto; }
+.pb-custom-admin #changelist table thead th { padding: 0; }
+.pb-custom-admin #changelist table thead th .text a, .pb-custom-admin #changelist table thead th .text span { padding: 12px 16px; }
+.pb-custom-admin #changelist table thead th.action-checkbox-column, .pb-custom-admin #changelist td.action-checkbox { padding: 12px 16px; text-align: center; }
+.pb-custom-admin #changelist table tbody tr.selected, .pb-custom-admin #changelist table tbody tr:has(.action-select:checked) { background: var(--pb-tint); }
+.pb-custom-admin #toolbar { padding: 0 0 20px; margin-bottom: 20px; border: 0; border-bottom: 1px solid var(--pb-rule); background: transparent; }
+.pb-custom-admin #toolbar form > div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pb-custom-admin #toolbar #searchbar { min-height: 44px; height: auto; margin: 0; padding: 10px 12px; width: min(320px, 100%); flex: 1 1 140px; }
+.pb-custom-admin #toolbar input[type="submit"] { margin: 0; padding: 10px 16px; min-height: 44px; }
+.pb-custom-admin #changelist .actions { padding: 0 0 20px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: transparent; }
+.pb-custom-admin #changelist .actions label { display: flex; align-items: center; gap: 8px; font-size: 14px; min-width: 0; }
+.pb-custom-admin #changelist .actions select { height: auto; min-height: 44px; margin: 0; max-width: 100%; padding: 10px 12px; font-size: 14px; }
+.pb-custom-admin #changelist .actions .button { height: auto; min-height: 44px; padding: 10px 16px; box-shadow: none; }
+.pb-custom-admin #changelist .paginator { padding: 16px 0; border: 0; background: transparent; overflow: visible; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.pb-custom-admin #changelist-filter { flex: 0 0 208px; padding-left: 24px; margin: 0; border-left: 1px solid var(--pb-rule); background: transparent; }
+.pb-custom-admin #changelist-filter h2 { padding: 0 0 16px; font-size: 15px; letter-spacing: 0; }
+.pb-custom-admin #changelist-filter details summary { padding: 0; list-style: disclosure-closed; margin: 0 0 8px; }
+.pb-custom-admin #changelist-filter details[open] summary { list-style: disclosure-open; }
+.pb-custom-admin #changelist-filter details summary::before { content: none; }
+.pb-custom-admin #changelist-filter h3 { padding: 0; font-size: 13px; }
+.pb-custom-admin #changelist-filter ul { padding: 0 0 16px; }
+.pb-custom-admin #changelist-filter a { padding: 6px 8px; font-size: 13px; }
+.pb-custom-admin #changelist-filter li.selected { margin: 0; padding: 0; border: 0; background: var(--pb-tint); border-radius: 4px; font-weight: 600; }
+.pb-custom-admin .select2-container { max-width: 100%; }
+.pb-custom-admin .select2-container .select2-selection--single { height: 44px; border-color: var(--pb-input-rule); border-radius: var(--pb-radius); }
+.pb-custom-admin .select2-container--admin-autocomplete .select2-selection--single .select2-selection__rendered { color: var(--pb-ink); line-height: 42px; padding-left: 12px; }
+.pb-custom-admin .select2-container--admin-autocomplete .select2-selection--single .select2-selection__arrow { height: 42px; }
+.pb-admin .select2-container--admin-autocomplete .select2-results__option--highlighted[aria-selected] { background: var(--pb-primary); }
+.pb-custom-admin .related-widget-wrapper { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.pb-custom-admin .related-widget-wrapper > .related-widget-wrapper-link { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; margin: 0; border-radius: var(--pb-radius); }
+.pb-custom-admin .related-widget-wrapper-link:hover { background: var(--pb-tint); }
+.pb-custom-admin .related-widget-wrapper-link img { width: 20px; height: 20px; }
+.pb-custom-admin .change-related img { content: url("../icons/square-pen.svg"); }
+.pb-custom-admin .add-related img { content: url("../icons/plus.svg"); }
+.pb-custom-admin .delete-related img { content: url("../icons/trash-2.svg"); }
+.pb-custom-admin .view-related img { content: url("../icons/scan-eye.svg"); }
+.pb-admin.popup .pb-public { display: block; padding: 24px; }
+.pb-admin.dashboard .pb-custom-admin #content { display: grid; grid-template-columns: minmax(0, 1fr) 248px; column-gap: 32px; }
+.pb-admin.dashboard #content > h1, .pb-admin.dashboard #content > .pb-subtitle { grid-column: 1 / -1; }
+.pb-admin.dashboard #content-related { float: none; width: auto; margin: 0; padding-left: 28px; border-left: 1px solid var(--pb-rule); background: transparent; }
+.pb-admin.dashboard #content-related .module { padding: 0; background: transparent; }
+.pb-admin.dashboard #content-related h2 { padding: 0 0 12px; margin: 0; border: 0; font-size: 15px; }
+.pb-admin.dashboard #content-related h3 { margin: 0 0 8px; padding: 0; font-size: 13px; }
+.pb-admin.dashboard #content-related p { padding: 0; }
+.pb-admin.dashboard #content-related .actionlist { margin: 0; padding: 0; }
+.pb-admin.dashboard #content-related .actionlist li { padding: 12px 0; border-bottom: 1px solid var(--pb-rule); background-image: none; }
+@media (max-width: 1100px) {
+  .pb-custom-admin #changelist { flex-direction: column; }
+  .pb-custom-admin #changelist .changelist-form-container { width: 100%; }
+  .pb-custom-admin #changelist-filter { flex: none; width: 100%; margin-top: 12px; padding: 20px 0 0; border-left: 0; border-top: 1px solid var(--pb-rule); display: flex; flex-wrap: wrap; gap: 16px 32px; }
+  .pb-custom-admin #changelist-filter h2, .pb-custom-admin #changelist-filter-extra-actions { width: 100%; margin: 0; padding: 0; }
+  .pb-admin.dashboard .pb-custom-admin #content { grid-template-columns: minmax(0, 1fr); }
+  .pb-admin.dashboard #content-related { padding: 24px 0 0; border-left: 0; border-top: 1px solid var(--pb-rule); }
+}
+@media (max-width: 759px) {
+  .pb-custom-admin #content > h1 { margin-bottom: 20px; }
+  .pb-custom-admin .module { overflow-x: auto; }
+  .pb-custom-admin #changelist { overflow: visible; }
+  .pb-custom-admin table th, .pb-custom-admin table td { padding: 10px 8px; }
+  .pb-custom-admin .object-tools { margin-bottom: 20px; }
+  .pb-custom-admin .object-tools li { width: auto; }
+  .pb-custom-admin .form-row .flex-container { flex-direction: column; gap: 6px; }
+  .pb-custom-admin .aligned label { width: auto; min-width: 0; padding: 0; }
+  .pb-custom-admin .aligned .checkbox-row { flex-direction: row; align-items: center; }
+  .pb-custom-admin .aligned .checkbox-row .vCheckboxLabel { padding: 0 0 0 8px; }
+  .pb-custom-admin .aligned .help, .pb-custom-admin .aligned ul.errorlist { margin-left: 0; padding-left: 0; }
+  .pb-custom-admin .form-row input:not([type="checkbox"]):not([type="radio"]), .pb-custom-admin .form-row textarea, .pb-custom-admin .form-row select { width: 100%; }
+  .pb-custom-admin .related-widget-wrapper { width: 100%; min-width: 0; }
+  .pb-custom-admin .related-widget-wrapper .select2-container { flex: 1 1 100%; }
+  .pb-custom-admin #changelist .actions label { width: 100%; flex-wrap: wrap; }
+  .pb-custom-admin #changelist .actions select { flex: 1; min-width: 0; }
+  .pb-custom-admin .submit-row input, .pb-custom-admin .submit-row a { flex: 1 1 140px; }
+}

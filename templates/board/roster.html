@@ -1,0 +1,10 @@
+{% extends "board/base.html" %}{% load static %}
+{% block content %}
+<div class="pb-heading"><div><h1>学生名单</h1><p class="pb-subtitle">{{ current_class }} · 共 {{ students|length }} 人</p></div><a class="pb-button pb-button--secondary" href="{% url 'import_roster' current_class.pk %}"><img src="{% static 'icons/upload.svg' %}" alt="">导入名单</a></div>
+<div class="pb-split">
+<section><h2>{% if editing %}修改学生{% else %}添加学生{% endif %}</h2><form method="post" class="pb-form">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<div class="pb-field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}<div class="pb-actions"><button class="pb-button pb-button--primary" type="submit"><img src="{% static 'icons/save.svg' %}" alt="">保存学生</button>{% if editing %}<a class="pb-button pb-button--secondary" href="{% url 'roster' current_class.pk %}">取消</a>{% endif %}</div></form></section>
+<section><div class="pb-section-heading"><h2>班级名单</h2><input class="pb-input pb-table-search" type="search" aria-label="搜索学生" placeholder="搜索姓名或学号" data-search-table="roster-table"></div>
+<div class="pb-table-wrap"><table class="pb-table" id="roster-table"><thead><tr><th>学号</th><th>姓名</th><th>状态</th><th>操作</th></tr></thead><tbody>{% for student in students %}<tr><td>{{ student.student_no }}</td><td>{{ student.name }}</td><td>{% if student.is_active %}在读{% else %}<span class="pb-muted">已离班</span>{% endif %}</td><td><div class="pb-actions"><a class="pb-icon-button" title="编辑学生" aria-label="编辑 {{ student.name }}" href="?edit={{ student.pk }}"><img src="{% static 'icons/square-pen.svg' %}" alt=""></a><form method="post" action="{% url 'deactivate_student' current_class.pk student.pk %}">{% csrf_token %}<button class="pb-button pb-button--text" type="submit">{% if student.is_active %}离班{% else %}恢复在读{% endif %}</button></form></div></td></tr>{% empty %}<tr><td colspan="4" class="pb-empty">名单为空，添加学生或导入名单。</td></tr>{% endfor %}</tbody></table></div>
+<p class="pb-search-empty pb-muted" data-search-empty="roster-table" role="status" hidden>没有匹配的学生。</p>
+</section></div>
+{% endblock %}
