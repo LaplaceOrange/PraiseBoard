@@ -93,8 +93,15 @@ class BoardTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "考试报告")
         self.assertContains(response, "考试成绩")
+        self.assertContains(response, "模型名称")
+        self.assertContains(response, "添加链接")
+        self.assertContains(response, "修改或查看列表链接")
+        self.assertContains(response, "修改")
         self.assertNotContains(response, "Exam reports")
         self.assertNotContains(response, "Exam scores")
+        self.assertNotContains(response, "Model name")
+        self.assertNotContains(response, "Add link")
+        self.assertNotContains(response, "Change or view list link")
 
     def test_navigation_memory_does_not_grant_class_or_admin_access(self):
         self.client.force_login(self.teacher)
