@@ -14,6 +14,7 @@ from .models import (
     RosterImport, Student, TeacherAssignment,
 )
 from .permissions import can_manage_class, is_admin
+from .scoring import decimal_points, evaluation_snapshot, student_snapshot
 
 
 def parse_day(value):
@@ -60,6 +61,9 @@ def save_items(user, board_id, assignment_id, items, version, submitted=True):
     if not isinstance(items, list) or not 1 <= len(items) <= 30:
         raise ValidationError("每次填报须包含 1 至 30 个表扬项目。")
     roster = {student.pk: student for student in board.classroom.students.filter(is_active=True)}
+    submission, _ = DailySubmission.objects.get_or_create(board=board, assignment=assignment)
+    existing = {item.pk: item for item in submission.items.all()}
+    retained = set()
     cleaned = []
     for index, item in enumerate(items):
         if not isinstance(item, dict):
@@ -68,6 +72,14 @@ def save_items(user, board_id, assignment_id, items, version, submitted=True):
         note = str(item.get("note", "")).strip()
         if not title or len(title) > 120 or len(note) > 400:
             raise ValidationError("项目标题须为 1 至 120 字，说明不能超过 400 字。")
+        item_id = item.get("id")
+        if item_id is not None:
+            if not isinstance(item_id, int) or item_id not in existing or item_id in retained:
+                raise ValidationError("表扬项目已更新，请刷新后重试。")
+            retained.add(item_id)
+        points = decimal_points(
+            item.get("points", existing[item_id].points if item_id else 1), nonnegative=True
+        )
         all_students = item.get("all_students") is True
         try:
             student_ids = set(int(value) for value in item.get("student_ids", []))
@@ -81,13 +93,16 @@ def save_items(user, board_id, assignment_id, items, version, submitted=True):
             students = [student for student in roster.values() if student.pk in student_ids]
         if not students:
             raise ValidationError("班级尚无在读学生，请先维护名单。")
-        cleaned.append(dict(
-            title=title, note=note, all_students=all_students, sort_order=index,
-            student_snapshots=[{"id": s.pk, "student_no": s.student_no, "name": s.name} for s in students],
-        ))
-    submission, _ = DailySubmission.objects.get_or_create(board=board, assignment=assignment)
-    submission.items.all().delete()
-    PraiseItem.objects.bulk_create([PraiseItem(submission=submission, **values) for values in cleaned])
+        cleaned.append((item_id, dict(
+            title=title, note=note, points=points, all_students=all_students, sort_order=index,
+            student_snapshots=[student_snapshot(s) for s in students],
+        )))
+    submission.items.exclude(pk__in=retained).delete()
+    for item_id, values in cleaned:
+        if item_id:
+            PraiseItem.objects.filter(pk=item_id).update(**values)
+        else:
+            PraiseItem.objects.create(submission=submission, **values)
     submission.is_submitted = submitted
     submission.submitted_at = timezone.now() if submitted else None
     submission.save()
@@ -105,7 +120,7 @@ def board_snapshot(board):
         section = sections.setdefault(subject.pk, {"subject": subject.name, "items": []})
         for item in submission.items.all():
             section["items"].append({
-                "id": item.pk, "title": item.title, "note": item.note,
+                "id": item.pk, "title": item.title, "note": item.note, "points": str(item.points),
                 "all_students": item.all_students, "students": item.student_snapshots,
                 "teacher": str(submission.assignment.teacher), "sort_order": item.sort_order,
             })
@@ -115,11 +130,14 @@ def board_snapshot(board):
         "classroom": board.classroom.name, "day": board.day.isoformat(),
         "title": board.title or "今日表扬榜", "footer": board.footer,
         "sections": list(sections.values()),
+        "evaluation": evaluation_snapshot(board),
     }
 
 
 @transaction.atomic
 def change_board_state(user, board_id, action, version, title="", footer=""):
+    classroom_id = DailyBoard.objects.values_list("classroom_id", flat=True).get(pk=board_id)
+    Classroom.objects.select_for_update().get(pk=classroom_id)
     board = DailyBoard.objects.select_for_update().select_related("classroom").get(pk=board_id)
     if not can_manage_class(user, board.classroom):
         raise PermissionDenied
@@ -138,8 +156,8 @@ def change_board_state(user, board_id, action, version, title="", footer=""):
         board.title, board.footer = title.strip(), footer.strip()
         if action == "finalize":
             snapshot = board_snapshot(board)
-            if not any(section["items"] for section in snapshot["sections"]):
-                raise ValidationError("没有已提交的表扬项目，不能定稿。")
+            if not snapshot["evaluation"]["rows"] and not any(section["items"] for section in snapshot["sections"]):
+                raise ValidationError("班级没有学生或记录，不能定稿。")
             number = (board.revisions.aggregate(number=Max("number"))["number"] or 0) + 1
             BoardRevision.objects.create(board=board, number=number, snapshot=snapshot, created_by=user)
             board.state = DailyBoard.State.FINALIZED
@@ -233,7 +251,17 @@ def read_roster(upload):
         if number in seen:
             errors.append(f"第 {line} 行：学号 {number} 在文件中重复。")
         seen.add(number)
-        rows.append({"student_no": number, "name": name})
+        values = {"student_no": number, "name": name}
+        for header, field, limit in (("组号", "group", 40), ("负责", "responsibility", 80)):
+            if headers.count(header) > 1:
+                raise ValidationError(f"表头“{header}”不能重复。")
+            if header in headers:
+                column = headers.index(header)
+                value = str(record[column] if column < len(record) and record[column] is not None else "").strip()
+                if len(value) > limit or value.startswith("="):
+                    errors.append(f"第 {line} 行：{header}过长或包含公式。")
+                values[field] = value
+        rows.append(values)
     if not rows:
         errors.append("文件中没有学生记录。")
     return rows, errors
@@ -252,7 +280,7 @@ def confirm_import(user, import_id):
     for row in preview.rows:
         Student.objects.update_or_create(
             classroom=preview.classroom, student_no=row["student_no"],
-            defaults={"name": row["name"], "is_active": True},
+            defaults={key: value for key, value in {**row, "is_active": True}.items() if key != "student_no"},
         )
     preview.state = RosterImport.State.IMPORTED
     preview.save(update_fields=("state",))

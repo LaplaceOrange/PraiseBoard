@@ -1,0 +1,24 @@
+services:
+  db:
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+  web:
+    ports:
+      - "0.0.0.0:18082:8000"
+    environment:
+      DJANGO_HTTPS: "0"
+      DJANGO_COOKIE_SECURE: "0"
+    mem_limit: 768m
+    command: ["gunicorn", "praiseboard.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1", "--timeout", "180", "--access-logfile", "-", "--error-logfile", "-"]
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+  caddy:
+    profiles:
+      - managed-https

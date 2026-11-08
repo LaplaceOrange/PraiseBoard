@@ -1,0 +1,75 @@
+{% extends "board/base.html" %}{% load static %}
+{% block title %}成绩雷达图 · {{ current_class }}{% endblock %}
+{% block content %}
+<div class="pb-heading">
+  <div><h1>成绩雷达图</h1><p class="pb-subtitle">{{ current_class }} · 按七科满分比例查看个人成绩</p></div>
+  {% if selected_exam %}<form method="post" action="{% url 'exam_radar_delete' current_class.pk selected_exam.pk %}" data-confirm="确定删除这场考试的成绩和雷达图？">{% csrf_token %}<button type="submit" class="pb-button pb-button--secondary"><img src="{% static 'icons/trash-2.svg' %}" alt="">删除这场考试</button></form>{% endif %}
+</div>
+<section class="pb-section">
+  <div class="pb-section-heading"><h2>导入考试成绩</h2></div>
+  <form method="post" enctype="multipart/form-data" class="pb-form pb-custom-radar-upload">
+    {% csrf_token %}<input type="hidden" name="action" value="upload">
+    {{ upload_form.non_field_errors }}
+    <div class="pb-field"><label for="{{ upload_form.title.id_for_label }}">{{ upload_form.title.label }}</label>{{ upload_form.title }}{{ upload_form.title.errors }}</div>
+    <div class="pb-field"><label for="{{ upload_form.sheet_name.id_for_label }}">{{ upload_form.sheet_name.label }}</label>{{ upload_form.sheet_name }}{{ upload_form.sheet_name.errors }}</div>
+    <div class="pb-field"><label for="{{ upload_form.file.id_for_label }}">{{ upload_form.file.label }}</label>{{ upload_form.file }}<span class="pb-muted">{{ upload_form.file.help_text }}</span>{{ upload_form.file.errors }}</div>
+    <button class="pb-button pb-button--primary" type="submit"><img src="{% static 'icons/upload.svg' %}" alt="">导入并生成</button>
+  </form>
+  {% if exams %}
+  <form method="get" class="pb-toolbar pb-custom-radar-toolbar">
+    <div class="pb-field"><label for="radar-exam">考试</label><select class="pb-input" id="radar-exam" name="exam">{% for exam in exams %}<option value="{{ exam.pk }}" {% if selected_exam.pk == exam.pk %}selected{% endif %}>{{ exam.title }} · {{ exam.created_at|date:"Y-m-d H:i" }}</option>{% endfor %}</select></div>
+    <button class="pb-button pb-button--secondary" type="submit">查看考试</button>
+    {% if selected_exam %}<span class="pb-muted">导入人：{{ selected_exam.imported_by|default:"未知" }}</span>{% endif %}
+  </form>
+  {% endif %}
+</section>
+{% if selected_exam and records %}
+<section class="pb-section">
+  <div class="pb-section-heading"><h2>{{ selected_exam.title }} · 学生雷达图</h2></div>
+  <div class="pb-custom-radar-layout">
+    <div>
+      <label class="pb-field pb-custom-radar-search"><span>搜索学生</span><input class="pb-input" type="search" id="radar-search" placeholder="姓名或学号"></label>
+      <div class="pb-table-wrap">
+        <table class="pb-table pb-custom-radar-table" id="radar-students">
+          <thead><tr><th>学号</th><th>姓名</th><th>总分 / 720</th><th>等级</th></tr></thead>
+          <tbody>
+          {% for record in records %}<tr data-radar-row data-search="{{ record.student_no }} {{ record.student_name }}" class="{% if selected_record.pk == record.pk %}is-selected{% endif %}">
+            <td><a href="?exam={{ selected_exam.pk }}&student={{ record.pk }}">{{ record.student_no }}</a></td>
+            <td><a href="?exam={{ selected_exam.pk }}&student={{ record.pk }}">{{ record.student_name }}</a></td>
+            <td>{{ record.total|floatformat:"-2" }}</td><td><strong>{{ record.grade }}</strong></td>
+          </tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="pb-muted pb-search-empty" id="radar-search-empty" hidden>没有匹配的学生。</p>
+    </div>
+    {% if selected_record and chart %}
+    <div class="pb-custom-radar-chart">
+      <div class="pb-section-heading"><h3>{{ selected_record.student_no }} · {{ selected_record.student_name }}</h3>
+        <div class="pb-actions">
+          <button class="pb-button pb-button--secondary" type="button" id="radar-copy" disabled><img src="{% static 'icons/clipboard-list.svg' %}" alt="">复制图片</button>
+          <button class="pb-button pb-button--secondary" type="button" id="radar-png-download" disabled><img src="{% static 'icons/download.svg' %}" alt="">下载 PNG</button>
+          <a class="pb-button pb-button--secondary" href="{% url 'exam_radar_download' current_class.pk selected_exam.pk selected_record.pk %}"><img src="{% static 'icons/download.svg' %}" alt="">下载 SVG</a>
+        </div>
+      </div>
+      <p class="pb-muted" role="status" id="radar-image-status">正在准备图片…</p>
+      <p class="pb-muted">综合 {{ chart.total|floatformat:"-2" }} / {{ total_full_score }} 分 · {{ chart.percentage }}% · {{ chart.grade }} 级</p>
+      {% include "board/radar_svg.html" with exam=selected_exam record=selected_record chart=chart %}
+      <p class="pb-muted">等级：S ≥ 92%，A ≥ 85%，B ≥ 75%，C ≥ 60%，其余为 D。总分按七科合计 720 分计算。</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+<section class="pb-section">
+  <h2>成绩与满分</h2>
+  <div class="pb-table-wrap"><table class="pb-table pb-custom-radar-scores"><thead><tr><th>学号</th><th>姓名</th>{% for field,name,full in subjects %}<th>{{ name }} / {{ full }}</th>{% endfor %}<th>总分 / 720</th><th>等级</th></tr></thead>
+    <tbody>{% for record in records %}<tr><td>{{ record.student_no }}</td><td>{{ record.student_name }}</td><td>{{ record.chinese|floatformat:"-2" }}</td><td>{{ record.mathematics|floatformat:"-2" }}</td><td>{{ record.english|floatformat:"-2" }}</td><td>{{ record.physics|floatformat:"-2" }}</td><td>{{ record.morals|floatformat:"-2" }}</td><td>{{ record.history|floatformat:"-2" }}</td><td>{{ record.pe|floatformat:"-2" }}</td><td>{{ record.total|floatformat:"-2" }}</td><td>{{ record.grade }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{% elif selected_exam %}
+<p class="pb-empty">这场考试没有可显示的学生成绩。</p>
+{% else %}
+<p class="pb-empty">导入成绩表后即可查看每位学生的学科雷达图。</p>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/radar.js' %}?v=20261017" defer></script>{% endblock %}

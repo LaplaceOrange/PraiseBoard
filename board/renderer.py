@@ -6,8 +6,8 @@ from playwright.sync_api import sync_playwright
 from .models import BoardExport, BoardRevision
 
 
-def render_pages(snapshot):
-    html = render_to_string("board/print.html", {"snapshot": snapshot})
+def render_pages(snapshot, template="board/print.html"):
+    html = render_to_string(template, {"snapshot": snapshot})
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
         try:

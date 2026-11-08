@@ -11,7 +11,10 @@ from django.urls import reverse
 from django.utils import timezone
 from playwright.sync_api import expect, sync_playwright
 
-from .models import Classroom, DailyBoard, DailySubmission, Student, Subject, TeacherAssignment, User
+from .models import (
+    Classroom, DailyBoard, DailySubmission, ExamReport, ExamScore, Student,
+    Subject, TeacherAssignment, User,
+)
 from .services import change_board_state, save_items
 
 
@@ -191,6 +194,153 @@ class FrontendTests(StaticLiveServerTestCase):
         self.page.locator(".pb-mobile-brand").focus()
         outline = self.page.locator(".pb-mobile-brand").evaluate("element => getComputedStyle(element).outlineWidth")
         self.assertEqual(outline, "3px")
+
+    def test_journal_note_and_report_clipboard_flow_on_mobile(self):
+        self.authenticate()
+        today = timezone.localdate().isoformat()
+        journal_url = f"/classes/{self.classroom.pk}/journal/?day={today}&tab=daily"
+        for width, height, device in [(1440, 900, "desktop"), (390, 844, "mobile")]:
+            self.page.set_viewport_size({"width": width, "height": height})
+            self.visit(journal_url)
+            expect(self.page.get_by_role("heading", name="每日综合评价")).to_be_visible()
+            self.check_layout(f"journal-{device}")
+        self.assertTrue(self.page.locator(".pb-table-wrap").evaluate(
+            "element => element.scrollWidth >= element.clientWidth"
+        ))
+
+        self.page.set_viewport_size({"width": 390, "height": 844})
+        self.visit(f"/classes/{self.classroom.pk}/journal/?day={today}&tab=entries")
+        self.page.locator("#entry-category").select_option("note")
+        self.page.locator("#student-search").fill("示例同学01")
+        self.page.locator("[name=student_ids]").first.check()
+        expect(self.page.locator("#entry-points")).to_be_disabled()
+        self.page.locator("#entry-reason").fill("家校联系")
+        self.page.locator("#entry-note").fill("已通知家长")
+        self.page.get_by_role("button", name="保存记录").click()
+        expect(self.page.locator(".pb-custom-score-record")).to_contain_text("家校联系")
+        expect(self.page.locator(".pb-custom-score-record")).to_contain_text("已通知家长")
+        expect(self.page.locator(".pb-custom-score-record")).to_contain_text("0.00 分")
+
+        seating_url = f"/classes/{self.classroom.pk}/journal/?day={today}&tab=seating"
+        for width, height, device in [(1440, 900, "desktop"), (390, 844, "mobile")]:
+            self.page.set_viewport_size({"width": width, "height": height})
+            self.visit(seating_url)
+            expect(self.page.get_by_role("link", name="按座位排")).to_be_visible()
+            expect(self.page.locator(".pb-custom-seat").first).to_contain_text("学号")
+            self.check_layout(f"seating-{device}")
+        self.page.get_by_role("link", name="按学号排").click()
+        expect(self.page.locator(".pb-custom-seat").first).not_to_contain_text("示例同学")
+        self.page.locator(".pb-custom-seat").first.click()
+        self.page.locator("#seat-reason").fill("课堂发言积极")
+        self.page.get_by_role("button", name="加 2 分").click()
+        self.page.get_by_role("link", name="按座位排").click()
+        expect(self.page.locator(".pb-custom-seat.is-positive.is-strong")).to_have_count(1)
+
+        self.visit(f"/classes/{self.classroom.pk}/journal/?day={today}&tab=settings")
+        expect(self.page.locator("#base-points")).to_have_value("5")
+        expect(self.page.locator("#calendar-enabled")).to_have_value(
+            "1" if timezone.localdate().weekday() < 5 else "0"
+        )
+        self.check_layout("journal-settings-mobile")
+
+        self.page.add_init_script("""(() => {
+          window.__clipboardWrites = 0;
+          window.__clipboardFails = false;
+          Object.defineProperty(navigator, "clipboard", {
+            configurable: true,
+            value: { write: async () => {
+              window.__clipboardWrites += 1;
+              if (window.__clipboardFails) throw new DOMException("denied", "NotAllowedError");
+            } }
+          });
+          window.ClipboardItem = class { constructor(data) { this.data = data; } };
+        })();""")
+        self.page.route("**/classes/*/report/prepare/", lambda route: route.fulfill(
+            status=200, content_type="application/json",
+            body=json.dumps({"download": "/fixture.zip", "pages": [{"number": 1, "url": "/fixture.png"}]}),
+        ))
+        self.page.route("**/fixture.png", lambda route: route.fulfill(
+            status=200, content_type="image/png",
+            body=bytes.fromhex("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+                               "0000000b49444154789c636000020000050001a5f645400000000049454e44ae426082"),
+        ))
+        report_url = f"/classes/{self.classroom.pk}/report/?day={today}&kind=evaluation"
+        self.page.set_viewport_size({"width": 1440, "height": 900})
+        self.visit(report_url)
+        self.check_layout("report-desktop")
+        self.page.set_viewport_size({"width": 390, "height": 844})
+        self.visit(report_url)
+        self.check_layout("report-mobile")
+        self.page.get_by_role("button", name="生成图片").click()
+        copy = self.page.get_by_role("button", name="复制图片")
+        expect(copy).to_be_visible()
+        expect(self.page.locator("#report-status")).to_have_text("已生成 1 页图片。")
+        copy.click()
+        expect(self.page.locator("#report-status")).to_have_text("已复制第 1 页图片。")
+        self.assertEqual(self.page.evaluate("window.__clipboardWrites"), 1)
+        self.page.evaluate("window.__clipboardFails = true")
+        copy.click()
+        expect(self.page.locator("#report-status")).to_contain_text("未能复制图片")
+        expect(self.page.locator('#report-pages a[download="report-1.png"]')).to_be_visible()
+        self.assertEqual(self.errors, [])
+
+    def test_radar_chart_responsive_and_png_clipboard(self):
+        def create_exam():
+            exam = ExamReport.objects.create(classroom=self.classroom, title="合成成绩测试")
+            fields = {
+                "chinese": 96, "mathematics": 102, "english": 90,
+                "physics": 80, "morals": 78, "history": 84, "pe": 48,
+            }
+            student = self.students[0]
+            ExamScore.objects.create(
+                exam=exam, student=student, student_no=student.student_no,
+                student_name=student.name, **fields,
+            )
+            for student_no, multiple in [("60", .6), ("75", .75), ("85", .85), ("92", .92)]:
+                ExamScore.objects.create(
+                    exam=exam, student_no=student_no, student_name=f"{student_no}线",
+                    is_reference=True,
+                    chinese=120 * multiple, mathematics=120 * multiple, english=120 * multiple,
+                    physics=100 * multiple, morals=100 * multiple, history=100 * multiple,
+                    pe=60 * multiple,
+                )
+            return exam.pk
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            exam_id = executor.submit(create_exam).result()
+        self.authenticate()
+        self.page.add_init_script("""(() => {
+          window.__clipboardWrites = 0;
+          window.__clipboardFails = false;
+          Object.defineProperty(navigator, "clipboard", {
+            configurable: true,
+            value: { write: async () => {
+              window.__clipboardWrites += 1;
+              if (window.__clipboardFails) throw new DOMException("denied", "NotAllowedError");
+            } }
+          });
+          window.ClipboardItem = class { constructor(data) { this.data = data; } };
+        })();""")
+        url = f"/classes/{self.classroom.pk}/radar/?exam={exam_id}"
+        for width, height, device in [(1440, 900, "desktop"), (390, 844, "mobile")]:
+            self.page.set_viewport_size({"width": width, "height": height})
+            self.visit(url)
+            expect(self.page.get_by_role("heading", name="成绩雷达图")).to_be_visible()
+            expect(self.page.locator("#radar-chart polygon")).to_have_count(10)
+            expect(self.page.locator("#radar-image-status")).to_contain_text("图片已准备好")
+            expect(self.page.locator("#radar-png-download")).to_be_enabled()
+            self.check_layout(f"radar-{device}")
+        self.page.set_viewport_size({"width": 390, "height": 844})
+        self.visit(url)
+        expect(self.page.locator("#radar-image-status")).to_contain_text("图片已准备好")
+        self.page.get_by_role("button", name="复制图片").click()
+        expect(self.page.locator("#radar-image-status")).to_have_text("已复制图片，可直接粘贴到微信。")
+        self.assertEqual(self.page.evaluate("window.__clipboardWrites"), 1)
+        self.page.evaluate("window.__clipboardFails = true")
+        self.page.get_by_role("button", name="复制图片").click()
+        expect(self.page.locator("#radar-image-status")).to_contain_text("未能复制图片")
+        expect(self.page.get_by_role("button", name="下载 PNG")).to_be_enabled()
+        self.assertEqual(self.errors, [])
 
     def test_login_and_roster_search(self):
         self.visit("/")

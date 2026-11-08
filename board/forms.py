@@ -47,10 +47,13 @@ class SecurePasswordChangeForm(PasswordChangeForm):
 class StudentForm(forms.ModelForm):
     class Meta:
         model = Student
-        fields = ("student_no", "name", "is_active")
+        fields = ("student_no", "name", "seat_order", "group", "responsibility", "is_active")
         widgets = {
             "student_no": forms.TextInput(attrs={"class": "pb-input", "autocomplete": "off"}),
             "name": forms.TextInput(attrs={"class": "pb-input", "autocomplete": "off"}),
+            "seat_order": forms.NumberInput(attrs={"class": "pb-input", "min": "0"}),
+            "group": forms.TextInput(attrs={"class": "pb-input"}),
+            "responsibility": forms.TextInput(attrs={"class": "pb-input"}),
         }
 
 
@@ -60,3 +63,31 @@ class RosterUploadForm(forms.Form):
         help_text="支持 CSV 或 XLSX。表格需要包含“学号”和“姓名”两列。",
         widget=forms.ClearableFileInput(attrs={"accept": ".csv,.xlsx", "class": "pb-input"}),
     )
+
+
+class ExamRadarUploadForm(forms.Form):
+    title = forms.CharField(
+        label="考试名称",
+        max_length=120,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "pb-input", "placeholder": "如：八下期末"}),
+    )
+    sheet_name = forms.CharField(
+        label="工作表名称",
+        max_length=31,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "pb-input", "placeholder": "留空读取第一个工作表"}),
+    )
+    file = forms.FileField(
+        label="成绩文件",
+        help_text="XLSX 格式，需包含学号、姓名、七科成绩及 60、75、85、92 号参考线。",
+        widget=forms.ClearableFileInput(attrs={"accept": ".xlsx", "class": "pb-input"}),
+    )
+
+    def clean_file(self):
+        uploaded_file = self.cleaned_data["file"]
+        if not uploaded_file.name.lower().endswith(".xlsx"):
+            raise ValidationError("请上传 XLSX 格式的成绩文件。")
+        if uploaded_file.size > 10 * 1024 * 1024:
+            raise ValidationError("成绩文件不能超过 10 MB。")
+        return uploaded_file

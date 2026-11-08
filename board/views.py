@@ -13,6 +13,7 @@ from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 
 from .auth import clear_login_failures, is_login_locked, record_login_failure
@@ -88,6 +89,7 @@ def identities(request):
     return response
 
 
+@never_cache
 def teacher_login(request):
     if request.user.is_authenticated:
         return redirect("dashboard")
@@ -118,6 +120,7 @@ def teacher_login(request):
     })
 
 
+@never_cache
 def administrator_login(request):
     if request.user.is_authenticated:
         if not is_admin(request.user):
@@ -145,6 +148,7 @@ def logout_view(request):
     return redirect("login")
 
 
+@never_cache
 @login_required
 def password_change(request):
     required = request.user.must_change_password
@@ -215,7 +219,7 @@ def editor(request, board_id, assignment_id):
     students = list(board.classroom.students.filter(is_active=True))
     items = [
         {
-            "title": item.title, "note": item.note, "all_students": item.all_students,
+            "id": item.pk, "title": item.title, "note": item.note, "points": str(item.points), "all_students": item.all_students,
             "student_ids": [s["id"] for s in item.student_snapshots],
         }
         for item in submission.items.all()
@@ -293,6 +297,8 @@ def item_action(request, item_id):
 def preview(request, board_id):
     board = _board(request.user, board_id, manage=True)
     snapshot = board.revisions.first().snapshot if board.is_finalized else board_snapshot(board)
+    if not board.is_finalized:
+        snapshot["title"] += "（草稿）"
     return render(request, "board/print.html", {"snapshot": snapshot, "screen_preview": True})
 
 
@@ -301,8 +307,15 @@ def preview(request, board_id):
 def export_images(request, board_id):
     board = _board(request.user, board_id, manage=True)
     if not board.is_finalized:
-        messages.error(request, "请先定稿，再下载图片。")
-        return redirect("board_detail", board_id=board.pk)
+        from .reports import prepare_images, report_snapshot
+        from .journal_views import bundle_download_response
+        try:
+            bundle = prepare_images(board.classroom, report_snapshot(board.classroom, board.day, "praise"), request.user)
+            return bundle_download_response(bundle)
+        except Exception:
+            logger.exception("Failed to render draft board %s", board.pk)
+            messages.error(request, "图片生成失败，请稍后重试。")
+            return redirect("board_detail", board_id=board.pk)
     revision = board.revisions.first()
     try:
         from .renderer import ensure_exports
@@ -410,7 +423,7 @@ def roster_template(request, classroom_id):
     response = HttpResponse("\ufeff", content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = 'attachment; filename="students-template.csv"'
     writer = csv.writer(response)
-    writer.writerow(["学号", "姓名"])
+    writer.writerow(["学号", "姓名", "组号", "负责"])
     return response
 
 

@@ -56,6 +56,57 @@ HSTS preload 默认关闭，检查可能提示可选的 `security.W021`。不应
 
 `postgres_data` 保存数据库，`board_media` 保存导出图片，`caddy_data` 保存证书。不要执行 `docker compose down -v`，该命令会删除这些数据卷。
 
+## 使用已有 Nginx
+
+如果 Nginx 已占用 80 和 443 端口，使用回环端口配置。它只启动数据库和应用，不启动 Caddy，也不修改 Nginx。
+
+```sh
+cp compose.nginx.yaml compose.override.yaml
+docker compose up -d --build db web
+```
+
+该配置将应用绑定到 `127.0.0.1:18082`，限制容器内存和日志大小，并使用一个 Gunicorn worker。`.env` 中的 `DOMAIN` 可以暂时设为 `localhost`。
+
+接入 HTTPS 域名时，在 `.env` 的 `DJANGO_ALLOWED_HOSTS` 中加入实际域名，保留 `localhost,127.0.0.1`。将 `DJANGO_CSRF_TRUSTED_ORIGINS` 设为实际 HTTPS 来源，然后执行 `docker compose up -d web`。
+
+Nginx 将请求转发到 `http://127.0.0.1:18082`，保留原始 `Host`，并覆盖 `X-Forwarded-Proto` 为 `$scheme`。`DJANGO_HTTPS=1` 时，Django 会启用 HTTPS 跳转和 HSTS。生产环境始终使用安全 Cookie。Nginx 负责 TLS 证书和 HTTP 跳转。客户端必须通过 HTTPS 访问，不要让客户端直接控制转发协议头。
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:18082;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_read_timeout 180s;
+    client_max_body_size 10m;
+}
+```
+
+初始配置关闭应用的 HTTPS 重定向和 HSTS，由前置 Nginx 控制这两项。需要由 Django 处理时，可在 `.env` 中将 `DJANGO_HTTPS` 设为 `1`，然后重启应用。应用会为该域名及其子域名发送一年有效的 HSTS；启用前应确认它们均支持 HTTPS。不要公开绑定应用端口。
+
+```sh
+curl -f http://127.0.0.1:18082/health/
+curl -I http://127.0.0.1:18082/staff-access/
+```
+
+`DJANGO_HTTPS=1` 时，上面的管理员入口会跳转到 HTTPS。检查代理后的页面可使用：
+
+```sh
+curl -I -H 'Host: your-domain.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:18082/staff-access/
+```
+
+`compose.override.yaml` 会被 Docker Compose 自动加载，因此本文中的备份、恢复和更新命令仍可使用。
+
+## 直接通过 IP 和端口访问
+
+没有域名且不接入现有反向代理时，可通过 `http://服务器IP:18082` 直接访问应用：
+
+```sh
+docker compose -f compose.yaml -f deploy/compose.direct.yaml up -d --build
+```
+
+此模式使用明文 HTTP，仅适合临时演示或可信网络。账号密码、会话 Cookie 和学生数据不会获得传输加密。正式使用应配置 HTTPS，并保持 `DJANGO_COOKIE_SECURE=1`。
+
 ## 备份与恢复
 
 备份脚本会短暂停止应用，确保数据库与图片属于同一份备份。数据库容器保持运行。

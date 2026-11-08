@@ -1,8 +1,26 @@
 from django.urls import path
 
 from . import views
+from . import journal_views
+from . import exam_views
 
 urlpatterns = [
+    path("classes/<int:classroom_id>/radar/", exam_views.exam_radar, name="exam_radar"),
+    path(
+        "classes/<int:classroom_id>/radar/<int:exam_id>/<int:score_id>/download/",
+        exam_views.exam_radar_download,
+        name="exam_radar_download",
+    ),
+    path(
+        "classes/<int:classroom_id>/radar/<int:exam_id>/delete/",
+        exam_views.exam_radar_delete,
+        name="exam_radar_delete",
+    ),
+    path("classes/<int:classroom_id>/journal/", journal_views.journal, name="journal"),
+    path("classes/<int:classroom_id>/report/", journal_views.report, name="report"),
+    path("classes/<int:classroom_id>/report/prepare/", journal_views.report_prepare, name="report_prepare"),
+    path("reports/pages/<int:page_id>/", journal_views.report_page, name="report_page"),
+    path("reports/<int:bundle_id>/download/", journal_views.report_download, name="report_download"),
     path("", views.teacher_login, name="login"),
     path("login/identities/", views.identities, name="identities"),
     path("staff-access/", views.administrator_login, name="administrator_login"),

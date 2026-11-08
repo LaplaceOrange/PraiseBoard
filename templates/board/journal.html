@@ -1,0 +1,110 @@
+{% extends "board/base.html" %}{% load static %}
+{% block title %}班务日志 · {{ current_class }}{% endblock %}
+{% block content %}
+<div class="pb-heading"><div><h1>班务日志</h1><p class="pb-subtitle">{{ current_class }} · {{ day|date:"Y年n月j日" }} · {{ board.get_state_display }}</p></div>
+{% if manager %}<div class="pb-actions"><a class="pb-button pb-button--secondary" href="{% url 'board_detail' board.pk %}"><img src="{% static 'icons/lock.svg' %}" alt="">汇总与定稿</a><a class="pb-button pb-button--primary" href="{% url 'report' current_class.pk %}?day={{ day|date:'Y-m-d' }}&kind={% if tab == 'weekly' %}weekly{% elif tab == 'homework' %}homework{% else %}evaluation{% endif %}"><img src="{% static 'icons/download.svg' %}" alt="">导出与复制</a></div>{% endif %}</div>
+<form method="get" class="pb-toolbar">
+<input type="hidden" name="tab" value="{{ tab }}">
+{% if manager %}<div class="pb-field"><label for="journal-day">日期</label><input class="pb-input" id="journal-day" name="day" type="date" value="{{ day|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}"></div><button class="pb-button pb-button--secondary" type="submit"><img src="{% static 'icons/refresh-cw.svg' %}" alt="">切换</button>{% endif %}
+<span class="pb-status">当日基础分 {{ base }}</span>
+</form>
+<nav class="pb-custom-tabs" aria-label="班务日志视图">
+{% if manager %}
+<a {% if tab == 'daily' %}aria-current="page"{% endif %} href="?day={{ day|date:'Y-m-d' }}&tab=daily">每日评价</a>
+<a {% if tab == 'entries' %}aria-current="page"{% endif %} href="?day={{ day|date:'Y-m-d' }}&tab=entries">积分明细</a>
+<a {% if tab == 'seating' %}aria-current="page"{% endif %} href="?day={{ day|date:'Y-m-d' }}&tab=seating">座位登记</a>
+{% endif %}
+<a {% if tab == 'homework' %}aria-current="page"{% endif %} href="?day={{ day|date:'Y-m-d' }}&tab=homework">各科作业</a>
+{% if manager %}
+<a {% if tab == 'weekly' %}aria-current="page"{% endif %} href="?day={{ day|date:'Y-m-d' }}&tab=weekly">周汇总</a>
+<a {% if tab == 'settings' %}aria-current="page"{% endif %} href="?day={{ day|date:'Y-m-d' }}&tab=settings">计分设置</a>
+{% endif %}</nav>
+{% if tab == 'seating' %}
+<section class="pb-section">
+<div class="pb-section-heading"><h2>课堂纪律登记</h2><div class="pb-custom-layout-switch" aria-label="排列方式">
+<a class="pb-button {% if seat_layout == 'seat' %}pb-button--primary{% else %}pb-button--secondary{% endif %}" href="?day={{ day|date:'Y-m-d' }}&tab=seating&layout=seat">按座位排</a>
+<a class="pb-button {% if seat_layout == 'number' %}pb-button--primary{% else %}pb-button--secondary{% endif %}" href="?day={{ day|date:'Y-m-d' }}&tab=seating&layout=number">按学号排</a>
+</div></div>
+<p class="pb-muted">点击学生位置后登记纪律积分。座位序号可在“学生名单”中设置；未设置时按学号排列。当天纪律分：红色为扣分，蓝色为加分。</p>
+{% if board.is_finalized %}<p class="pb-message">当天已定稿，记录只读。</p>{% endif %}
+<div class="pb-custom-classroom">
+<div class="pb-custom-front">讲台</div>
+<div class="pb-custom-seats {% if seat_layout == 'number' %}is-number-order{% endif %}">
+{% for row in seat_rows %}
+<a class="pb-custom-seat {% if row.tone == 'negative' %}is-negative{% elif row.tone == 'positive' %}is-positive{% endif %} {% if row.intensity == 'strong' %}is-strong{% endif %} {% if selected_student_id == row.student.pk %}is-selected{% endif %}"
+href="?day={{ day|date:'Y-m-d' }}&tab=seating&layout={{ seat_layout }}&student={{ row.student.pk }}"
+aria-current="{% if selected_student_id == row.student.pk %}true{% else %}false{% endif %}">
+<span class="pb-custom-seat-position">{% if seat_layout == 'seat' %}座位 {{ row.position }}{% else %}{{ row.student.student_no }}{% endif %}</span>
+{% if seat_layout == 'seat' %}<strong>{{ row.student.name }}</strong><span>学号 {{ row.student.student_no }}</span>{% else %}<span>纪律 {{ row.score }} 分</span>{% endif %}
+</a>
+{% empty %}<p class="pb-empty">暂无在读学生。</p>{% endfor %}
+</div>
+</div>
+{% if not board.is_finalized and selected_student_id %}
+{% for row in seat_rows %}{% if row.student.pk == selected_student_id %}<form method="post" class="pb-custom-seat-form">
+{% csrf_token %}<input type="hidden" name="action" value="seat_score"><input type="hidden" name="version" value="{{ board.version }}"><input type="hidden" name="student_id" value="{{ row.student.pk }}">
+<div><h3>{{ row.student.student_no }} · {{ row.student.name }}</h3><p class="pb-muted">当前日常纪律分 {{ row.score }}</p></div>
+<div class="pb-field"><label for="seat-reason">原因</label><input class="pb-input" id="seat-reason" name="reason" maxlength="120" required placeholder="如：课堂发言积极、未按要求就座"></div>
+<div class="pb-field"><label for="seat-note">备注（选填）</label><input class="pb-input" id="seat-note" name="note" maxlength="1000"></div>
+<div class="pb-actions"><button class="pb-button pb-custom-deduct" name="points" value="-1">扣 1 分</button><button class="pb-button pb-custom-deduct pb-custom-strong" name="points" value="-2">扣 2 分</button><button class="pb-button pb-custom-add" name="points" value="1">加 1 分</button><button class="pb-button pb-custom-add pb-custom-strong" name="points" value="2">加 2 分</button></div>
+</form>{% endif %}{% endfor %}
+{% endif %}
+</section>
+<section class="pb-section"><h2>当日纪律记录</h2>
+{% for entry in entries %}{% if entry.category == 'discipline' %}<article class="pb-record pb-custom-score-record"><div><strong>{% for student in entry.student_snapshots %}{{ student.student_no }} · {{ student.name }}{% if not forloop.last %}、{% endif %}{% endfor %}</strong><p>日常纪律 · {{ entry.points }} 分 · {{ entry.reason }}</p>{% if entry.note %}<p class="pb-muted">{{ entry.note|linebreaksbr }}</p>{% endif %}</div></article>{% endif %}{% empty %}<p class="pb-empty">暂无纪律记录。</p>{% endfor %}
+</section>
+{% endif %}
+{% if tab == 'daily' or tab == 'weekly' %}
+<section class="pb-section">
+<div class="pb-section-heading"><h2>{% if tab == 'weekly' %}{{ week.day }} 至 {{ week.end }}{% else %}每日综合评价{% endif %}</h2><input class="pb-input pb-table-search" type="search" placeholder="搜索姓名、学号或组号" aria-label="搜索评价表" data-search-table="evaluation-table"></div>
+{% if evaluation.legacy or week.legacy %}<p class="pb-message pb-message--error">旧版定稿没有保存积分数据，相关日期未计入汇总。</p>{% endif %}
+{% if week %}<p class="pb-muted">{% for source in week.days %}{{ source.day }} {% if source.draft %}草稿{% else %}第{{ source.revision }}版{% endif %}{% if not forloop.last %}；{% endif %}{% endfor %}</p>{% endif %}
+<div class="pb-table-wrap"><table class="pb-table pb-custom-evaluation" id="evaluation-table"><thead><tr><th>学号</th><th>组号</th><th>负责</th><th>姓名</th><th>基础分</th><th>早到午到</th><th>作业未交</th><th>体育卫生</th><th>日常纪律</th><th>日常表扬</th><th>合计</th><th>备注</th></tr></thead><tbody>
+{% for row in rows %}<tr><td>{{ row.student_no }}</td><td>{{ row.group }}</td><td>{{ row.responsibility }}</td><td>{{ row.name }}</td><td>{{ row.base }}</td>{% for score in row.category_values %}<td>{{ score }}</td>{% endfor %}<td><strong>{{ row.total }}</strong></td><td>{% for note in row.notes %}<p>{{ note }}</p>{% endfor %}</td></tr>{% empty %}<tr><td colspan="12" class="pb-empty">暂无积分数据。</td></tr>{% endfor %}
+</tbody></table></div><p class="pb-muted pb-search-empty" data-search-empty="evaluation-table" hidden>没有匹配的学生。</p>
+</section>
+{% endif %}
+{% if tab == 'entries' or tab == 'homework' %}
+{% if not board.is_finalized %}
+<section class="pb-section"><h2>{% if editing %}修改记录{% else %}登记{% if manager %}加减分{% else %}作业扣分{% endif %}{% endif %}</h2>
+<form method="post" class="pb-form" id="score-entry-form">
+{% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="version" value="{{ board.version }}"><input type="hidden" name="entry_id" value="{{ editing.pk|default:'' }}">
+<div class="pb-custom-entry-grid"><div>
+<div class="pb-field"><label for="target-mode">对象范围</label><select class="pb-input" name="target" id="target-mode"><option value="students" {% if initial.target == 'students' %}selected{% endif %}>选择学生</option><option value="group" {% if initial.target == 'group' %}selected{% endif %}>整组</option><option value="all" {% if initial.target == 'all' %}selected{% endif %}>全班</option></select></div>
+<div class="pb-field" data-target-group><label for="target-group">组号</label><select class="pb-input" name="group" id="target-group"><option value="">请选择</option>{% for group in groups %}<option {% if initial.group == group %}selected{% endif %}>{{ group }}</option>{% endfor %}</select></div>
+<div data-target-students>
+<div class="pb-field"><label for="student-search">学生</label><input id="student-search" type="search" class="pb-input" placeholder="搜索姓名或学号"></div>
+<div class="pb-custom-score-students">{% for student in students %}<label data-student-search="{{ student.student_no }} {{ student.name }}"><input type="checkbox" name="student_ids" value="{{ student.pk }}" {% if student.pk in initial.student_ids %}checked{% endif %}><span>{{ student.student_no }} · {{ student.name }}{% if student.group %} · {{ student.group }}组{% endif %}</span></label>{% empty %}<p class="pb-muted">暂无在读学生。</p>{% endfor %}</div>
+</div></div><div>
+<div class="pb-field"><label for="entry-category">类别</label><select class="pb-input" id="entry-category" name="category">{% for key,label in categories %}<option value="{{ key }}" {% if initial.category == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+<div class="pb-field" data-homework-subject><label for="entry-subject">科目</label><select class="pb-input" name="subject_id" id="entry-subject"><option value="">请选择</option>{% for subject in subjects %}<option value="{{ subject.pk }}" {% if initial.subject_id|stringformat:"s" == subject.pk|stringformat:"s" %}selected{% endif %}>{{ subject.name }}</option>{% endfor %}</select></div>
+<div class="pb-field"><label for="entry-reason">原因</label><input id="entry-reason" class="pb-input" name="reason" maxlength="120" required value="{{ initial.reason }}"></div>
+<div class="pb-field"><label for="entry-points">每人分值</label><input id="entry-points" class="pb-input" name="points" type="number" step="0.01" required value="{{ initial.points }}"></div>
+<div class="pb-field"><label for="entry-note">备注（选填）</label><textarea id="entry-note" name="note" class="pb-input" rows="3" maxlength="1000">{{ initial.note }}</textarea></div>
+<div class="pb-actions"><button class="pb-button pb-button--primary" type="submit"><img src="{% static 'icons/save.svg' %}" alt="">保存记录</button>{% if editing %}<a class="pb-button pb-button--secondary" href="?day={{ day|date:'Y-m-d' }}&tab={{ tab }}">取消</a>{% endif %}</div>
+</div></div></form></section>
+{% else %}<p class="pb-message">当天已定稿。</p>{% endif %}
+<section class="pb-section"><h2>已登记明细</h2>
+{% for entry in entries %}<article class="pb-record pb-custom-score-record"><div><strong>{% for student in entry.student_snapshots %}{{ student.name }}{% if not forloop.last %}、{% endif %}{% endfor %}</strong><p>{{ entry.get_category_display }}{% if entry.subject %} · {{ entry.subject }}{% endif %} · {{ entry.points }} 分 · {{ entry.reason }}</p>{% if entry.note %}<p class="pb-muted">{{ entry.note|linebreaksbr }}</p>{% endif %}<p class="pb-muted">{{ entry.created_by }} · {{ entry.updated_at|date:"m-d H:i" }}</p></div>
+{% if not board.is_finalized %}<div class="pb-icon-actions"><a class="pb-icon-button" aria-label="修改记录" title="修改记录" href="?day={{ day|date:'Y-m-d' }}&tab={{ tab }}&edit={{ entry.pk }}"><img src="{% static 'icons/square-pen.svg' %}" alt=""></a><form method="post" data-confirm="确定删除这条记录？">{% csrf_token %}<input type="hidden" name="version" value="{{ board.version }}"><input type="hidden" name="entry_id" value="{{ entry.pk }}"><button class="pb-icon-button" name="action" value="delete" aria-label="删除记录" title="删除记录"><img src="{% static 'icons/trash-2.svg' %}" alt=""></button></form></div>{% endif %}</article>{% empty %}<p class="pb-empty">暂无登记记录。</p>{% endfor %}
+{% if manager and tab == 'entries' %}{% for detail in evaluation.details %}{% if detail.source == 'praise' %}<article class="pb-record"><div><strong>{% for student in detail.students %}{{ student.name }}{% if not forloop.last %}、{% endif %}{% endfor %}</strong><p>日常表扬 · {{ detail.points }} 分 · {{ detail.reason }}</p><p class="pb-muted">{{ detail.subject }} · {{ detail.teacher }}{% if detail.note %} · {{ detail.note }}{% endif %}</p></div>{% if not board.is_finalized %}<a class="pb-button pb-button--secondary" href="{% url 'editor' board.pk detail.assignment_id %}">调整表扬</a>{% endif %}</article>{% endif %}{% endfor %}{% endif %}
+</section>
+{% for table in homework_tables %}<section class="pb-section"><h2>{{ table.title }}</h2><div class="pb-table-wrap"><table class="pb-table pb-custom-evaluation"><thead><tr>{% for header in table.headers %}<th>{{ header }}</th>{% endfor %}</tr></thead><tbody>{% for row in table.rows %}<tr>{% for value in row %}<td>{{ value|default_if_none:""|linebreaksbr }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div></section>{% endfor %}
+{% endif %}
+{% if tab == 'settings' %}
+<div class="pb-split pb-section">
+<section><h2>每日基础分</h2><form method="post" class="pb-form">{% csrf_token %}<input type="hidden" name="action" value="base"><input type="hidden" name="version" value="{{ current_class.scoring_version }}">
+<div class="pb-field"><label for="base-day">生效日期</label><input class="pb-input" id="base-day" type="date" name="day" value="{{ day|date:'Y-m-d' }}" required></div>
+<div class="pb-field"><label for="base-points">全班每日基础分</label><input class="pb-input" id="base-points" type="number" min="0" step="0.01" name="points" value="{{ configured_base }}" required></div>
+<button class="pb-button pb-button--primary" type="submit"><img src="{% static 'icons/save.svg' %}" alt="">保存基础分</button></form>
+<div class="pb-section">{% for rule in base_rules %}<p>{{ rule.effective_day|date:"Y-m-d" }} 起：{{ rule.points }} 分</p>{% empty %}<p class="pb-muted">默认每日 5 分。</p>{% endfor %}</div></section>
+<section><h2>计分日调整</h2><form method="post" class="pb-form">{% csrf_token %}<input type="hidden" name="action" value="calendar"><input type="hidden" name="version" value="{{ current_class.scoring_version }}">
+<div class="pb-field"><label for="calendar-day">日期</label><input class="pb-input" id="calendar-day" type="date" name="day" value="{{ day|date:'Y-m-d' }}" required></div>
+<div class="pb-field"><label for="calendar-enabled">基础分发放</label><select class="pb-input" id="calendar-enabled" name="enabled"><option value="0" {% if not calendar_enabled %}selected{% endif %}>不发放（放假）</option><option value="1" {% if calendar_enabled %}selected{% endif %}>发放（上课）</option></select></div>
+<div class="pb-field"><label for="calendar-note">说明（选填）</label><input class="pb-input" id="calendar-note" name="note" maxlength="160" value="{{ calendar_override.note }}"></div>
+<button class="pb-button pb-button--primary" type="submit"><img src="{% static 'icons/save.svg' %}" alt="">保存计分日</button></form>
+<div class="pb-section">{% for override in calendar %}<div class="pb-record"><div>{{ override.day|date:"Y-m-d" }} · {% if override.enabled %}发放{% else %}不发放{% endif %}<p class="pb-muted">{{ override.note }}</p></div><form method="post">{% csrf_token %}<input type="hidden" name="action" value="calendar_reset"><input type="hidden" name="version" value="{{ current_class.scoring_version }}"><input type="hidden" name="day" value="{{ override.day|date:'Y-m-d' }}"><button type="submit" class="pb-button pb-button--text">恢复默认</button></form></div>{% empty %}<p class="pb-muted">周一至周五发放，周末不发放。</p>{% endfor %}</div></section>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/journal.js' %}" defer></script>{% endblock %}

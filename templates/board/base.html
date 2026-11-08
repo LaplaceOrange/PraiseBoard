@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#147c78">
   <title>{% block title %}表扬榜{% endblock %}</title>
-  {% block stylesheets %}<link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261009-admin">{% endblock %}
+  {% block stylesheets %}<link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261106-seating">{% endblock %}
   <link rel="icon" href="{% static 'icons/award.svg' %}" type="image/svg+xml">
-  <script src="{% static 'js/app.js' %}?v=20261007" defer></script>
+  <script src="{% static 'js/app.js' %}?v=20261017-journal" defer></script>
   {% block head %}{% endblock %}
 </head>
 <body {% block body_attributes %}{% endblock %}>
@@ -31,8 +31,10 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <nav aria-label="工作台">
       <a class="pb-nav {% if active_nav == 'dashboard' %}is-active{% endif %}" {% if active_nav == 'dashboard' %}aria-current="page"{% endif %} href="{% url 'dashboard' %}{% if current_class %}?classroom={{ current_class.pk }}{% endif %}"><img src="{% static 'icons/clipboard-list.svg' %}" alt="">每日填报</a>
       {% if current_class %}
+        <a class="pb-nav {% if active_nav == 'journal' %}is-active{% endif %}" href="{% url 'journal' current_class.pk %}"><img src="{% static 'icons/book-open.svg' %}" alt="">班务日志</a>
         {% if current_class.homeroom_teacher_id == request.user.pk or is_admin %}
         <a class="pb-nav {% if active_nav == 'roster' %}is-active{% endif %}" {% if active_nav == 'roster' %}aria-current="page"{% endif %} href="{% url 'roster' current_class.pk %}"><img src="{% static 'icons/users.svg' %}" alt="">学生名单</a>
+        <a class="pb-nav {% if active_nav == 'radar' %}is-active{% endif %}" {% if active_nav == 'radar' %}aria-current="page"{% endif %} href="{% url 'exam_radar' current_class.pk %}"><img src="{% static 'icons/scan-eye.svg' %}" alt="">成绩雷达图</a>
         {% endif %}
         <a class="pb-nav {% if active_nav == 'assignments' %}is-active{% endif %}" {% if active_nav == 'assignments' %}aria-current="page"{% endif %} href="{% url 'assignments' current_class.pk %}"><img src="{% static 'icons/book-open.svg' %}" alt="">任教关系</a>
       {% endif %}

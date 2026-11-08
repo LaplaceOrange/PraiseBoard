@@ -12,6 +12,8 @@ from .models import (
     Classroom,
     DailyBoard,
     DailySubmission,
+    ExamReport,
+    ExamScore,
     LoginFailureBucket,
     PraiseItem,
     RosterImport,
@@ -125,7 +127,7 @@ class TeacherAssignmentAdmin(admin.ModelAdmin):
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ("student_no", "name", "classroom", "is_active")
+    list_display = ("student_no", "name", "group", "responsibility", "classroom", "is_active")
     list_filter = ("classroom", "is_active")
     search_fields = ("student_no", "name")
 
@@ -185,3 +187,5 @@ class ReadOnlyAdmin(admin.ModelAdmin):
 admin.site.register(BoardExport, ReadOnlyAdmin)
 admin.site.register(RosterImport, ReadOnlyAdmin)
 admin.site.register(LoginFailureBucket, ReadOnlyAdmin)
+admin.site.register(ExamReport, ReadOnlyAdmin)
+admin.site.register(ExamScore, ReadOnlyAdmin)

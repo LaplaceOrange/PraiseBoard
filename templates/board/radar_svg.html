@@ -1,0 +1,33 @@
+{% load l10n %}{% localize off %}<svg xmlns="http://www.w3.org/2000/svg" id="radar-chart" class="pb-custom-radar-svg" width="680" height="{{ chart.image_height }}" viewBox="0 0 680 {{ chart.image_height }}" role="img" aria-labelledby="radar-title radar-desc" data-filename="{{ exam.title }}-{{ record.student_no }}-{{ record.student_name }}">
+  <style>
+    #radar-chart text { font-family: "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; }
+    #radar-chart .radar-title { fill: #18353b; font-size: 18px; font-weight: 650; }
+    #radar-chart .radar-subject { fill: #18353b; font-size: 16px; font-weight: 600; }
+    #radar-chart .radar-full { fill: #51646a; font-size: 14px; font-weight: 400; }
+    #radar-chart .radar-score { fill: #0e615e; font-size: 14px; }
+    #radar-chart .radar-ring-label { fill: #51646a; font-size: 11px; }
+    #radar-chart .radar-legend { fill: #18353b; font-size: 14px; }
+  </style>
+  <title id="radar-title">{{ record.student_name }}学科能力雷达图</title>
+  <desc id="radar-desc">{{ exam.title }}，综合 {{ chart.total|floatformat:"-2u" }} / 720 分，{{ chart.grade }} 级。S ≥ 92%，A ≥ 85%，B ≥ 75%，C ≥ 60%，其余为 D。</desc>
+  <rect width="680" height="{{ chart.image_height }}" fill="#ffffff"/>
+  {% for line in chart.title_lines %}<text x="340" y="{{ line.y }}" text-anchor="middle" class="radar-title">{{ line.text }}</text>{% endfor %}
+  {% for ring in chart.rings %}<polygon points="{{ ring.points }}" fill="none" stroke="#dce5e6" stroke-width="1"/>{% endfor %}
+  {% for axis in chart.axes %}
+    <line x1="{{ chart.center_x }}" y1="{{ chart.center_y }}" x2="{{ axis.x2 }}" y2="{{ axis.y2 }}" stroke="#b9cbcd" stroke-width="1"/>
+    <text x="{{ axis.label_x }}" y="{{ axis.label_y }}" text-anchor="{{ axis.anchor }}" class="radar-subject">{{ axis.name }} <tspan class="radar-full">/{{ axis.full_score }}</tspan></text>
+    <text x="{{ axis.score_x }}" y="{{ axis.score_y }}" text-anchor="{{ axis.anchor }}" class="radar-score">{{ axis.score }} ({{ axis.percentage }}%)</text>
+  {% endfor %}
+  {% for reference in chart.references %}<polygon points="{{ reference.points }}" fill="none" stroke="{{ reference.color }}" stroke-width="1.5" stroke-dasharray="5 4" opacity=".9"/>{% endfor %}
+  <polygon points="{{ chart.student_polygon }}" fill="#18353b" fill-opacity=".10" stroke="#18353b" stroke-width="2.5"/>
+  {% for axis in chart.axes %}<circle cx="{{ axis.point_x }}" cy="{{ axis.point_y }}" r="3.5" fill="#147c78"/>{% endfor %}
+  {% for ring in chart.ring_labels %}<text x="{{ ring.x }}" y="{{ ring.y }}" class="radar-ring-label" aria-hidden="true">{{ ring.label }}</text>{% endfor %}
+  <g class="radar-legend">
+    {% for reference in chart.references %}
+      <line x1="{{ reference.legend_x }}" y1="{{ reference.legend_y }}" x2="{{ reference.legend_x|add:28 }}" y2="{{ reference.legend_y }}" stroke="{{ reference.color }}" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="{{ reference.legend_x|add:36 }}" y="{{ reference.legend_y|add:4 }}">{{ reference.label }}</text>
+    {% endfor %}
+    <line x1="70" y1="{{ chart.footer_y }}" x2="98" y2="{{ chart.footer_y }}" stroke="#18353b" stroke-width="2.5"/>
+    <text x="106" y="{{ chart.footer_y|add:4 }}">本人成绩 · {{ chart.total|floatformat:"-2u" }}/720 · {{ chart.percentage }}% · {{ chart.grade }}级</text>
+  </g>
+</svg>{% endlocalize %}

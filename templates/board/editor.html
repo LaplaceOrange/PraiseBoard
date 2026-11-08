@@ -16,6 +16,7 @@
     <div class="pb-section-heading"><h2>表扬项目 <span data-item-number></span></h2><button class="pb-icon-button pb-delete-item" type="button" title="删除项目" aria-label="删除项目"><img src="{% static 'icons/trash-2.svg' %}" alt=""></button></div>
     <div class="pb-item-layout"><div class="pb-item-fields">
     <div class="pb-field"><label>项目名称<input class="pb-input" name="title" maxlength="120" required placeholder="例如：作业认真、课堂积极"></label></div>
+    <div class="pb-field"><label>每人加分<input class="pb-input" name="points" type="number" min="0" step="0.01" value="1" required></label></div>
     <div class="pb-field"><label>说明 <span class="pb-muted">（选填）</span><textarea class="pb-input" name="note" maxlength="400" rows="2"></textarea></label></div>
     </div><div class="pb-selector">
       <div class="pb-section-heading"><strong>表扬名单</strong><div class="pb-actions"><span class="pb-status" data-selected-count aria-live="polite">已选 0 人</span><button type="button" class="pb-icon-button" data-clear-students title="清空选择" aria-label="清空选择"><img src="{% static 'icons/rotate-ccw.svg' %}" alt=""></button></div></div>
@@ -27,4 +28,4 @@
   </section>
 </template>
 {% endblock %}
-{% block scripts %}<script src="{% static 'js/editor.js' %}?v=20261007" defer></script>{% endblock %}
+{% block scripts %}<script src="{% static 'js/editor.js' %}?v=20261017-points" defer></script>{% endblock %}

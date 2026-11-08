@@ -19,14 +19,16 @@
       element.textContent = index + 1;
     });
   };
-  const add = (data = { title: "", note: "", student_ids: [], all_students: false }) => {
+  const add = (data = { title: "", note: "", points: "1", student_ids: [], all_students: false }) => {
     if (container.children.length >= 30) {
       error.textContent = "最多可添加 30 个表扬项目。";
       return;
     }
     const item = template.content.firstElementChild.cloneNode(true);
+    if (data.id) item.dataset.id = data.id;
     item.querySelector("[name=title]").value = data.title;
     item.querySelector("[name=note]").value = data.note;
+    item.querySelector("[name=points]").value = data.points ?? "1";
     const all = item.querySelector("[name=all_students]");
     all.checked = data.all_students;
     const list = item.querySelector(".pb-student-list");
@@ -106,8 +108,10 @@
     if (saving) return;
     error.textContent = "";
     const items = [...container.children].map((item) => ({
+      ...(item.dataset.id ? { id: Number(item.dataset.id) } : {}),
       title: item.querySelector("[name=title]").value.trim(),
       note: item.querySelector("[name=note]").value.trim(),
+      points: item.querySelector("[name=points]").value,
       all_students: item.querySelector("[name=all_students]").checked,
       student_ids: [...item.querySelectorAll("[name=student]:checked")].map((input) => Number(input.value)),
     }));

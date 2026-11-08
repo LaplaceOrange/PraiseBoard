@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>{{ snapshot.title }}</title>
+<style>
+*{box-sizing:border-box}body{margin:0;color:#18353b;font-family:"Noto Sans CJK SC","Microsoft YaHei",sans-serif;letter-spacing:0}
+.print-page{width:1560px;height:1640px;padding:45px;position:relative;background:white;overflow:hidden}
+.print-header{border-bottom:2px solid #147c78;padding-bottom:18px;margin-bottom:22px}
+h2{font-size:32px;line-height:1.4;margin:0 0 12px;overflow-wrap:anywhere}
+.context{font-size:20px;line-height:1.5;overflow-wrap:anywhere}
+.print-content{height:1390px;overflow:hidden}
+table{table-layout:fixed;border-collapse:collapse;width:100%;font-size:20px;line-height:1.5}
+th,td{border-bottom:1px solid #dce5e6;padding:10px 7px;text-align:left;vertical-align:top;overflow-wrap:anywhere;white-space:pre-wrap}
+th{background:#e7f4f2;font-weight:650}th:last-child,td:last-child{width:320px}
+th:nth-child(4),td:nth-child(4){width:125px}
+.print-footer{position:absolute;bottom:24px;left:45px;right:45px;font-size:17px;color:#51646a}
+</style></head>
+<body><div id="pages"></div>{{ snapshot|json_script:"report-data" }}
+<script>
+(async()=>{
+await document.fonts.ready;
+const data=JSON.parse(document.querySelector("#report-data").textContent),host=document.querySelector("#pages");
+const el=(tag,text="")=>{const node=document.createElement(tag);node.textContent=text;return node;};
+let content,body;
+const create=table=>{
+ const page=el("article");page.className="print-page";
+ const header=el("header");header.className="print-header";
+ header.append(el("h2",`${data.classroom} · ${table.title}${data.draft?"（草稿）":""}`));
+ const context=el("div",data.dates+" · "+data.sources.map(s=>`${s.day} ${s.draft?"草稿":`第${s.revision}版`}`).join("；")+(table.legacy?" · 旧版定稿无积分数据，未计入汇总":""));
+ context.className="context";header.append(context);
+ content=el("div");content.className="print-content";
+ const grid=el("table"),head=el("thead"),row=el("tr");table.headers.forEach(h=>row.append(el("th",h)));head.append(row);
+ body=el("tbody");grid.append(head,body);content.append(grid);
+ const footer=el("footer");footer.className="print-footer";page.append(header,content,footer);host.append(page);
+ content.style.height=`${footer.offsetTop-content.offsetTop-20}px`;
+};
+const overflow=()=>content.scrollHeight>content.clientHeight+1;
+const append=values=>{const row=el("tr");values.forEach(v=>row.append(el("td",v??"")));body.append(row);return row;};
+for(const table of data.tables){
+ create(table);
+ if(!table.rows.length)append(["暂无记录"]);
+ for(const values of table.rows){
+  let remaining=values.map(v=>String(v??""));
+  while(true){
+   let row=append(remaining);
+   if(!overflow())break;
+   row.remove();
+   if(body.children.length){create(table);continue;}
+   // Split oversized cells by measured height; repeat student identity on continuation pages.
+   let parts=remaining.slice();
+   for(let i=0;i<parts.length;i++){
+    if(parts[i].length<=16)continue;
+    const original=parts[i];let low=0,high=original.length;
+    while(low<high){
+     const middle=Math.ceil((low+high)/2),probe=parts.slice();probe[i]=original.slice(0,middle);
+     const test=append(probe),fits=!overflow();test.remove();
+     if(fits)low=middle;else high=middle-1;
+    }
+    parts[i]=original.slice(0,Math.max(1,low));
+   }
+   row=append(parts);
+   if(overflow())throw Error("表格行无法分页");
+   const next=remaining.map((value,i)=>value.slice(parts[i].length));
+   if(!next.some(Boolean))break;
+   remaining=next.map((value,i)=>value || (i<4?String(values[i]??""):""));
+   create(table);
+  }
+ }
+}
+host.querySelectorAll(".print-footer").forEach((f,i)=>f.textContent=`第 ${i+1} / ${host.children.length} 页`);
+window.boardReady=true;
+})();
+</script></body></html>

@@ -36,6 +36,7 @@ class Classroom(models.Model):
         related_name="homeroom_classes",
     )
     is_active = models.BooleanField("启用", default=True)
+    scoring_version = models.PositiveIntegerField("计分设置版本", default=0)
 
     class Meta:
         ordering = ("name",)
@@ -71,6 +72,9 @@ class Student(models.Model):
     classroom = models.ForeignKey(Classroom, verbose_name="班级", on_delete=models.CASCADE, related_name="students")
     student_no = models.CharField("学号", max_length=40)
     name = models.CharField("姓名", max_length=80)
+    seat_order = models.PositiveSmallIntegerField("座位序号", default=0)
+    group = models.CharField("组号", max_length=40, blank=True)
+    responsibility = models.CharField("负责", max_length=80, blank=True)
     is_active = models.BooleanField("在读", default=True)
     created_at = models.DateTimeField("创建时间", auto_now_add=True)
 
@@ -150,6 +154,7 @@ class PraiseItem(models.Model):
     submission = models.ForeignKey(DailySubmission, verbose_name="教师填报", on_delete=models.CASCADE, related_name="items")
     title = models.CharField("表扬项目", max_length=120)
     note = models.CharField("说明", max_length=400, blank=True)
+    points = models.DecimalField("每人加分", max_digits=12, decimal_places=2, default=1)
     all_students = models.BooleanField("全班同学", default=False)
     student_snapshots = models.JSONField("学生名单快照", default=list, blank=True)
     sort_order = models.PositiveSmallIntegerField("展示顺序", default=0)
@@ -222,3 +227,121 @@ class BoardRevision(models.Model):
         constraints = [
             models.UniqueConstraint(fields=("board", "number"), name="unique_board_revision")
         ]
+
+
+class BaseScoreRule(models.Model):
+    classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, related_name="base_score_rules")
+    effective_day = models.DateField("生效日期")
+    points = models.DecimalField("每日基础分", max_digits=12, decimal_places=2)
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        ordering = ("-effective_day",)
+        constraints = [
+            models.UniqueConstraint(fields=("classroom", "effective_day"), name="unique_base_score_day")
+        ]
+
+
+class ScoringDayOverride(models.Model):
+    classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, related_name="scoring_days")
+    day = models.DateField("日期")
+    enabled = models.BooleanField("发放基础分", default=True)
+    note = models.CharField("说明", max_length=160, blank=True)
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        ordering = ("-day",)
+        constraints = [
+            models.UniqueConstraint(fields=("classroom", "day"), name="unique_scoring_day_override")
+        ]
+
+
+class ScoreEntry(models.Model):
+    class Category(models.TextChoices):
+        ARRIVAL = "arrival", "早到午到"
+        HOMEWORK = "homework", "作业未交"
+        HEALTH = "health", "体育卫生"
+        DISCIPLINE = "discipline", "日常纪律"
+        PRAISE = "praise", "日常表扬"
+        NOTE = "note", "仅备注"
+
+    board = models.ForeignKey(DailyBoard, on_delete=models.CASCADE, related_name="score_entries")
+    category = models.CharField("类别", max_length=20, choices=Category.choices)
+    subject = models.ForeignKey(Subject, on_delete=models.PROTECT, null=True, blank=True)
+    reason = models.CharField("原因", max_length=120)
+    points = models.DecimalField("每人分值", max_digits=12, decimal_places=2)
+    note = models.CharField("备注", max_length=1000, blank=True)
+    student_snapshots = models.JSONField("学生快照", default=list)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="score_entries")
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("created_at", "id")
+
+
+class ReportBundle(models.Model):
+    classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, related_name="report_bundles")
+    kind = models.CharField(max_length=20)
+    fingerprint = models.CharField(max_length=64)
+    snapshot = models.JSONField(default=dict)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("classroom", "kind", "fingerprint"), name="unique_report_bundle")
+        ]
+
+
+class ReportPage(models.Model):
+    bundle = models.ForeignKey(ReportBundle, on_delete=models.CASCADE, related_name="pages")
+    number = models.PositiveIntegerField()
+    file = models.FileField(upload_to="reports/%Y/%m/")
+
+    class Meta:
+        ordering = ("number",)
+        constraints = [
+            models.UniqueConstraint(fields=("bundle", "number"), name="unique_report_page")
+        ]
+
+
+class ExamReport(models.Model):
+    classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, related_name="exam_reports")
+    title = models.CharField("考试名称", max_length=120)
+    imported_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField("导入时间", auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at", "-id")
+        verbose_name = "考试报告"
+        verbose_name_plural = "考试报告"
+
+    def __str__(self):
+        return f"{self.classroom} · {self.title}"
+
+
+class ExamScore(models.Model):
+    exam = models.ForeignKey(ExamReport, on_delete=models.CASCADE, related_name="scores")
+    student = models.ForeignKey(
+        Student, on_delete=models.SET_NULL, null=True, blank=True, related_name="exam_scores",
+    )
+    student_no = models.CharField("学号", max_length=40)
+    student_name = models.CharField("姓名", max_length=80, blank=True)
+    is_reference = models.BooleanField("参考线", default=False)
+    chinese = models.DecimalField("语文", max_digits=6, decimal_places=2)
+    mathematics = models.DecimalField("数学", max_digits=6, decimal_places=2)
+    english = models.DecimalField("英语", max_digits=6, decimal_places=2)
+    physics = models.DecimalField("物理", max_digits=6, decimal_places=2)
+    morals = models.DecimalField("道法", max_digits=6, decimal_places=2)
+    history = models.DecimalField("历史", max_digits=6, decimal_places=2)
+    pe = models.DecimalField("体育", max_digits=6, decimal_places=2)
+
+    class Meta:
+        ordering = ("student_no", "student_name")
+        constraints = [
+            models.UniqueConstraint(fields=("exam", "student_no"), name="unique_exam_score_student_no")
+        ]
+        verbose_name = "考试成绩"
+        verbose_name_plural = "考试成绩"

@@ -1,0 +1,24 @@
+{% extends "board/base.html" %}{% load static %}
+{% block title %}导出与复制 · {{ current_class }}{% endblock %}
+{% block content %}
+<div class="pb-heading"><div><h1>导出与复制</h1><p class="pb-subtitle">{{ current_class }} · {{ snapshot.dates }} · {% if snapshot.draft %}草稿{% else %}定稿{% endif %}</p></div><a class="pb-button pb-button--secondary" href="{% url 'journal' current_class.pk %}?day={{ day|date:'Y-m-d' }}">返回日志</a></div>
+<form method="get" class="pb-toolbar">
+<div class="pb-field"><label for="report-day">日期</label><input class="pb-input" id="report-day" name="day" type="date" max="{{ today|date:'Y-m-d' }}" value="{{ day|date:'Y-m-d' }}"></div>
+<div class="pb-field"><label for="report-kind">报告</label><select class="pb-input" id="report-kind" name="kind">{% for key,label in report_kinds %}<option value="{{ key }}" {% if kind == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+<div class="pb-field"><label for="report-subject">作业科目</label><select class="pb-input" id="report-subject" name="subject">{% for subject in subjects %}<option value="{{ subject.pk }}" {% if subject_id == subject.pk|stringformat:"s" %}selected{% endif %}>{{ subject }}</option>{% endfor %}</select></div>
+<button class="pb-button pb-button--secondary" type="submit"><img src="{% static 'icons/refresh-cw.svg' %}" alt="">切换</button>
+</form>
+<div class="pb-actions pb-section">
+<a class="pb-button pb-button--secondary" href="?day={{ day|date:'Y-m-d' }}&kind={{ kind }}&subject={{ subject_id }}&format=xlsx"><img src="{% static 'icons/download.svg' %}" alt="">导出 Excel</a>
+<form method="post" action="{% url 'report_prepare' current_class.pk %}" id="report-prepare">{% csrf_token %}<input type="hidden" name="day" value="{{ day|date:'Y-m-d' }}"><input type="hidden" name="kind" value="{{ kind }}"><input type="hidden" name="subject" value="{{ subject_id }}"><button class="pb-button pb-button--primary" type="submit"><img src="{% static 'icons/scan-eye.svg' %}" alt="">生成图片</button></form>
+<a class="pb-button pb-button--secondary" id="report-download" hidden><img src="{% static 'icons/download.svg' %}" alt="">下载全部图片</a>
+</div>
+<p id="report-status" class="pb-muted" role="status" aria-live="polite"></p>
+<div id="report-pages" class="pb-custom-report-pages"></div>
+{% if snapshot.legacy %}<p class="pb-message pb-message--error">旧版定稿未保存积分，相关日期未计入汇总。</p>{% endif %}
+<section class="pb-section"><h2>报告内容</h2>
+{% for table in snapshot.tables %}<div class="pb-section"><h3>{{ table.title }}</h3><div class="pb-table-wrap"><table class="pb-table pb-custom-evaluation"><thead><tr>{% for header in table.headers %}<th>{{ header }}</th>{% endfor %}</tr></thead><tbody>{% for row in table.rows %}<tr>{% for value in row %}<td>{{ value|default_if_none:""|linebreaksbr }}</td>{% endfor %}</tr>{% empty %}<tr><td>暂无记录。</td></tr>{% endfor %}</tbody></table></div></div>{% endfor %}
+{% if kind == 'praise' %}{% for section in snapshot.praise.sections %}{% for item in section.items %}<div class="pb-record"><div><strong>{% if item.all_students %}全班同学{% else %}{% for student in item.students %}{{ student.name }} {% endfor %}{% endif %}</strong><p>{{ item.title }} · 每人加 {{ item.points|default:"0" }} 分</p><p class="pb-muted">{{ item.note }} · {{ section.subject }}</p></div></div>{% endfor %}{% endfor %}{% endif %}
+</section>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/report.js' %}" defer></script>{% endblock %}

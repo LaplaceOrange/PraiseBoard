@@ -4,6 +4,8 @@
 <div class="pb-heading"><div><h1>{{ current_class }}表扬榜</h1><p class="pb-subtitle">{{ board.day|date:"Y年n月j日" }} · <span class="pb-status {% if board.is_finalized %}pb-status--success{% endif %}">{{ board.get_state_display }}</span></p></div>
 <a class="pb-button pb-button--secondary" href="{% url 'dashboard' %}?classroom={{ current_class.pk }}&day={{ board.day|date:'Y-m-d' }}">返回</a></div>
 <div class="pb-action-band">
+  <a class="pb-button pb-button--secondary" href="{% url 'journal' current_class.pk %}?day={{ board.day|date:'Y-m-d' }}"><img src="{% static 'icons/book-open.svg' %}" alt="">班务日志</a>
+  <a class="pb-button pb-button--secondary" href="{% url 'report' current_class.pk %}?day={{ board.day|date:'Y-m-d' }}&kind=praise"><img src="{% static 'icons/clipboard-list.svg' %}" alt="">导出与复制</a>
   <a class="pb-button pb-button--secondary" href="{% url 'preview' board.pk %}" target="_blank" rel="noopener"><img src="{% static 'icons/scan-eye.svg' %}" alt="">图片预览</a>
   {% if board.is_finalized %}
   <form method="post" action="{% url 'export' board.pk %}">{% csrf_token %}<button class="pb-button pb-button--primary" type="submit"><img src="{% static 'icons/download.svg' %}" alt="">下载图片</button></form>
